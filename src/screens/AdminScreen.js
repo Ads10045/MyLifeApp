@@ -208,8 +208,8 @@ export default function AdminScreen() {
               <Text style={styles.statLabel}>Utilisateurs</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.orders}</Text>
-              <Text style={styles.statLabel}>Commandes</Text>
+              <Text style={styles.statValue}>{stats.products || 0}</Text>
+              <Text style={styles.statLabel}>Produits</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{stats.revenue} €</Text>

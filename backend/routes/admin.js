@@ -173,6 +173,7 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
     const userCount = await prisma.user.count();
     const orderCount = await prisma.order.count();
     const locationCount = await prisma.location.count();
+    const productCount = await prisma.product.count();
 
     const totalRevenue = await prisma.order.aggregate({
       _sum: { total: true },
@@ -181,6 +182,7 @@ router.get('/stats', authMiddleware, adminMiddleware, async (req, res) => {
     res.json({
       users: userCount,
       orders: orderCount,
+      products: productCount,
       locations: locationCount,
       revenue: totalRevenue._sum.total || 0,
     });

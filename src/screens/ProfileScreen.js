@@ -104,7 +104,7 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Statistiques</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{user?.orders?.length || 0}</Text>
+            <Text style={styles.statValue}>{user?._count?.Order || user?.orders?.length || 0}</Text>
             <Text style={styles.statLabel}>Commandes</Text>
           </View>
           <View style={styles.statCard}>
