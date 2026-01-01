@@ -10,26 +10,35 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null); // User being edited
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Form state
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('USER');
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [userRole, setUserRole] = useState('USER');
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
+    // Debug logs
+    console.log('AdminScreen Mounted');
+    console.log('User Role:', user?.role);
+    console.log('Token check:', token ? 'Token exists' : 'No token');
+
+    if (user?.role === 'ADMIN' && token) {
       loadData();
+    } else {
+        console.warn('Condition failed for loadData:', { role: user?.role, hasToken: !!token });
     }
-  }, [user]);
+  }, [user, token]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('Loading Data...');
       await Promise.all([fetchUsers(), fetchStats()]);
+      console.log('Data loading complete');
     } catch (error) {
-      console.error(error);
+      console.error('LoadData error:', error);
       Alert.alert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
@@ -38,13 +47,32 @@ export default function AdminScreen() {
 
   const fetchUsers = async () => {
     try {
+      console.log('Fetching users from:', API_ENDPOINTS.ADMIN.USERS);
       const response = await fetch(API_ENDPOINTS.ADMIN.USERS, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json' 
+        },
       });
+      console.log('Fetch Users Status:', response.status);
+      
       const data = await response.json();
-      if (response.ok) setUsers(data);
+      console.log('Fetch Users Data:', JSON.stringify(data).substring(0, 100) + '...'); // Log first 100 chars
+      
+      if (response.ok) {
+        if (Array.isArray(data)) {
+            setUsers(data);
+        } else {
+            console.error('Data is not an array:', data);
+            setUsers([]);
+        }
+      } else {
+        console.error('Fetch users failed:', data);
+        Alert.alert('Erreur Chargement', data.error || 'Impossible de récupérer les utilisateurs');
+      }
     } catch (error) {
       console.error('Fetch users error:', error);
+      Alert.alert('Erreur Connexion', error.message);
     }
   };
 
@@ -61,7 +89,7 @@ export default function AdminScreen() {
   };
 
   const handleSaveUser = async () => {
-    if (!name || !email) {
+    if (!userName || !userEmail) {
       Alert.alert('Erreur', 'Nom et email obligatoires');
       return;
     }
@@ -69,15 +97,14 @@ export default function AdminScreen() {
     try {
       let url = API_ENDPOINTS.ADMIN.USERS;
       let method = 'POST';
-      let body = { name, email, role, password };
+      let body = { name: userName, email: userEmail, role: userRole, password: userPassword };
 
       if (editMode && currentUser) {
         url = `${API_ENDPOINTS.ADMIN.USERS}/${currentUser.id}`;
         method = 'PUT';
-        // Only send password if changed
-        if (!password) delete body.password;
+        if (!userPassword) delete body.password;
       } else {
-        if (!password) {
+        if (!userPassword) {
             Alert.alert('Erreur', 'Mot de passe obligatoire pour la création');
             return;
         }
@@ -101,7 +128,7 @@ export default function AdminScreen() {
       Alert.alert('Succès', editMode ? 'Utilisateur modifié' : 'Utilisateur créé');
       setModalVisible(false);
       resetForm();
-      loadData();
+      fetchUsers();
     } catch (error) {
       Alert.alert('Erreur', error.message);
     }
@@ -122,13 +149,8 @@ export default function AdminScreen() {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` },
               });
-              
-              if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Erreur suppression');
-              }
-              
-              loadData();
+              if (!response.ok) throw new Error('Erreur suppression');
+              fetchUsers();
               Alert.alert('Succès', 'Utilisateur supprimé');
             } catch (error) {
                 Alert.alert('Erreur', error.message);
@@ -148,18 +170,18 @@ export default function AdminScreen() {
   const openEditModal = (user) => {
     setEditMode(true);
     setCurrentUser(user);
-    setName(user.name);
-    setEmail(user.email);
-    setRole(user.role);
-    setPassword(''); // Reset password field
+    setUserName(user.name);
+    setUserEmail(user.email);
+    setUserRole(user.role);
+    setUserPassword('');
     setModalVisible(true);
   };
 
   const resetForm = () => {
-    setName('');
-    setEmail('');
-    setPassword('');
-    setRole('USER');
+    setUserName('');
+    setUserEmail('');
+    setUserPassword('');
+    setUserRole('USER');
     setCurrentUser(null);
   };
 
@@ -167,7 +189,6 @@ export default function AdminScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.accessDeniedText}>⛔ Accès Refusé</Text>
-        <Text style={styles.accessDeniedSubtext}>Vous devez être administrateur pour voir cette page.</Text>
       </View>
     );
   }
@@ -200,7 +221,6 @@ export default function AdminScreen() {
           </View>
         )}
 
-        {/* Users Section */}
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Gestion Utilisateurs ({users.length})</Text>
             <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
@@ -213,7 +233,7 @@ export default function AdminScreen() {
         ) : (
           users.map((item) => (
             <View key={item.id} style={styles.userCard}>
-              <View style={styles.userInfo}>
+                <View style={styles.userInfo}>
                 <View style={styles.nameRow}>
                     <Text style={styles.userName}>{item.name}</Text>
                     {item.role === 'ADMIN' && <Text style={styles.adminBadge}>ADMIN</Text>}
@@ -222,21 +242,23 @@ export default function AdminScreen() {
                 <Text style={styles.userDetails}>
                     Commandes: {item._count?.orders || 0} • GPS: {item._count?.locations || 0}
                 </Text>
-              </View>
-              <View style={styles.actions}>
+                </View>
+                <View style={styles.actions}>
                 <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconButton}>
-                  <Text style={styles.iconText}>✏️</Text>
+                    <Text style={styles.iconText}>✏️</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDeleteUser(item.id)} style={styles.iconButton}>
-                  <Text style={styles.iconText}>🗑️</Text>
+                    <Text style={styles.iconText}>🗑️</Text>
                 </TouchableOpacity>
-              </View>
+                </View>
             </View>
           ))
         )}
+        
+        <View style={{height: 100}} />
       </ScrollView>
 
-      {/* Modal Add/Edit */}
+      {/* User Add/Edit Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -245,41 +267,33 @@ export default function AdminScreen() {
                 <TextInput
                     style={styles.input}
                     placeholder="Nom complet"
-                    value={name}
-                    onChangeText={setName}
+                    value={userName}
+                    onChangeText={setUserName}
                 />
-                
                 <TextInput
                     style={styles.input}
                     placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
+                    value={userEmail}
+                    onChangeText={setUserEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
                 />
-
                 <TextInput
                     style={styles.input}
-                    placeholder={editMode ? "Nouveau mot de passe (laisser vide pour garder)" : "Mot de passe"}
-                    value={password}
-                    onChangeText={setPassword}
+                    placeholder={editMode ? "Nouveau mot de passe" : "Mot de passe"}
+                    value={userPassword}
+                    onChangeText={setUserPassword}
                     secureTextEntry
                 />
 
                 <View style={styles.roleContainer}>
                     <Text style={styles.roleLabel}>Rôle:</Text>
                     <View style={styles.roleButtons}>
-                        <TouchableOpacity 
-                            style={[styles.roleButton, role === 'USER' && styles.roleButtonActive]} 
-                            onPress={() => setRole('USER')}
-                        >
-                            <Text style={[styles.roleButtonText, role === 'USER' && styles.roleButtonTextActive]}>USER</Text>
+                        <TouchableOpacity style={[styles.roleButton, userRole === 'USER' && styles.roleButtonActive]} onPress={() => setUserRole('USER')}>
+                            <Text style={[styles.roleButtonText, userRole === 'USER' && styles.roleButtonTextActive]}>USER</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.roleButton, role === 'ADMIN' && styles.roleButtonActive]} 
-                            onPress={() => setRole('ADMIN')}
-                        >
-                            <Text style={[styles.roleButtonText, role === 'ADMIN' && styles.roleButtonTextActive]}>ADMIN</Text>
+                        <TouchableOpacity style={[styles.roleButton, userRole === 'ADMIN' && styles.roleButtonActive]} onPress={() => setUserRole('ADMIN')}>
+                            <Text style={[styles.roleButtonText, userRole === 'ADMIN' && styles.roleButtonTextActive]}>ADMIN</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -300,246 +314,54 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    padding: 20
-  },
-  accessDeniedText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#DC2626',
-    marginBottom: 8
-  },
-  accessDeniedSubtext: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center'
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  refreshButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  refreshButtonText: {
-    fontSize: 18,
-  },
-  content: {
-    padding: 20,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  addButton: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  userCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginRight: 8,
-  },
-  adminBadge: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    fontWeight: 'bold',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  userDetails: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  actions: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    padding: 8,
-    marginLeft: 4,
-  },
-  iconText: {
-    fontSize: 18,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  roleContainer: {
-    marginBottom: 24,
-  },
-  roleLabel: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
-  },
-  roleButtons: {
-    flexDirection: 'row',
-  },
-  roleButton: {
-    flex: 1,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    marginRight: 8,
-    borderRadius: 8,
-  },
-  roleButtonActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
-  },
-  roleButtonText: {
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  roleButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    padding: 14,
-    borderRadius: 8,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#374151',
-    fontWeight: 'bold',
-  },
-  submitButton: {
-    flex: 1,
-    backgroundColor: '#10B981',
-    padding: 14,
-    borderRadius: 8,
-    marginLeft: 10,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  header: { backgroundColor: '#FFFFFF', paddingTop: 60, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+  refreshButton: { padding: 8, borderRadius: 8, backgroundColor: '#F3F4F6' },
+  refreshButtonText: { fontSize: 18 },
+  content: { padding: 20 },
+  
+  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, marginTop: 10 },
+  statCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12, alignItems: 'center', marginHorizontal: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  statValue: { fontSize: 18, fontWeight: 'bold', color: '#10B981', marginBottom: 4 },
+  statLabel: { fontSize: 12, color: '#6B7280' },
+  
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  addButton: { backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  addButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+  
+  // User Card
+  userCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  userInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  userName: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginRight: 8 },
+  adminBadge: { fontSize: 10, color: '#FFFFFF', backgroundColor: '#3B82F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, fontWeight: 'bold' },
+  userEmail: { fontSize: 14, color: '#6B7280', marginBottom: 4 },
+  userDetails: { fontSize: 12, color: '#9CA3AF' },
+  
+  actions: { flexDirection: 'row' },
+  iconButton: { padding: 8, marginLeft: 4 },
+  iconText: { fontSize: 18 },
+
+  // Modal 
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 20, textAlign: 'center' },
+  input: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginBottom: 16 },
+  roleContainer: { marginBottom: 24 },
+  roleLabel: { marginBottom: 8 },
+  roleButtons: { flexDirection: 'row' },
+  roleButton: { flex: 1, padding: 10, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center', marginRight: 8, borderRadius: 8 },
+  roleButtonActive: { backgroundColor: '#10B981', borderColor: '#10B981' },
+  roleButtonText: { color: '#6B7280' },
+  roleButtonTextActive: { color: '#FFFFFF' },
+  modalActions: { flexDirection: 'row' },
+  cancelButton: { flex: 1, backgroundColor: '#F3F4F6', padding: 14, borderRadius: 8, marginRight: 10, alignItems: 'center' },
+  cancelButtonText: { fontWeight: 'bold' },
+  submitButton: { flex: 1, backgroundColor: '#10B981', padding: 14, borderRadius: 8, marginLeft: 10, alignItems: 'center' },
+  submitButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+  
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 20 },
+  accessDeniedText: { fontSize: 24, fontWeight: 'bold', color: '#DC2626' },
 });

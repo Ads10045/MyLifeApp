@@ -7,9 +7,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  ADMIN
+model Location {
+  id         String   @id
+  userId     String
+  latitude   Float
+  longitude  Float
+  address    String
+  street     String?
+  city       String?
+  postalCode String?
+  region     String?
+  country    String?
+  timestamp  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id         String      @id
+  userId     String
+  total      Float
+  createdAt  DateTime    @default(now())
+  commission Float       @default(0)
+  products   Json        @default("[]")
+  status     OrderStatus @default(PENDING)
+  stripeId   String?
+  subtotal   Float       @default(0)
+  updatedAt  DateTime    @default(now())
+  User       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id            String   @id
+  name          String
+  description   String
+  price         Float
+  supplierPrice Float
+  margin        Float
+  imageUrl      String
+  images        String[] // Multiple product images
+  sourceUrl     String?  // Original product URL (Amazon, AliExpress, eBay, Temu)
+  category      String
+  supplierId    String   @unique
+  supplier      String
+  stock         Int      @default(100)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model User {
+  id         String       @id
+  name       String
+  email      String       @unique
+  password   String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime
+  role       Role         @default(USER)
+  avatar     String?
+  provider   AuthProvider @default(EMAIL)
+  providerId String?
+  Location   Location[]
+  Order      Order[]
 }
 
 enum AuthProvider {
@@ -18,48 +81,16 @@ enum AuthProvider {
   FACEBOOK
 }
 
-model User {
-  id         String       @id @default(uuid())
-  name       String
-  email      String       @unique
-  password   String?      // Optional for OAuth users
-  role       Role         @default(USER)
-  provider   AuthProvider @default(EMAIL)
-  providerId String?      // OAuth provider's user ID
-  avatar     String?      // Profile picture URL
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  
-  // Relations futures
-  orders    Order[]
-  locations Location[]
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
 }
 
-model Order {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  total     Float
-  items     Json
-  createdAt DateTime @default(now())
-}
-
-model Location {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  latitude    Float
-  longitude   Float
-  address     String
-  street      String?
-  city        String?
-  postalCode  String?
-  region      String?
-  country     String?
-  timestamp   DateTime @default(now())
-}
-
-model Setting {
-  key   String @id
-  value String
+enum Role {
+  USER
+  ADMIN
 }

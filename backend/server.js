@@ -75,6 +75,15 @@ app.use('/api/user', userRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/products', require('./routes/products'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/agent', require('./routes/agent'));
+
+// Start Cron Jobs
+const sourcingJob = require('./jobs/sourcingJob');
+const fulfillmentJob = require('./jobs/fulfillmentJob');
+sourcingJob.startSchedule();
+fulfillmentJob.startSchedule();
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -84,6 +93,15 @@ app.get('/api/health', (req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
+
+  // Envoyer alerte email
+  const { sendErrorEmail } = require('./services/emailService');
+  sendErrorEmail(err, {
+    user: { id: req.userId, email: 'See DB' }, // On a seulement userId ici
+    route: `${req.method} ${req.originalUrl}`,
+    filter: { query: req.query, body: req.body }
+  });
+
   res.status(500).json({ error: 'Something went wrong!' });
 });
 

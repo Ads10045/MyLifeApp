@@ -10,11 +10,11 @@ router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
+      include: {
+        orders: {
+          take: 5,
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: {
             orders: true,
@@ -27,6 +27,14 @@ router.get('/profile', authMiddleware, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
+
+    // Calculer total dépensé
+    const aggregations = await prisma.order.aggregate({
+      where: { userId: req.userId },
+      _sum: { total: true }
+    });
+    
+    user.totalSpent = aggregations._sum.total || 0;
 
     res.json(user);
   } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
+import { LogOut } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfileScreen() {
@@ -25,7 +26,7 @@ export default function ProfileScreen() {
       <View style={styles.topBar}>
         <View /> 
         <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Text style={styles.logoutIcon}>🚪</Text>
+          <LogOut color="#EF4444" size={20} />
         </TouchableOpacity>
       </View>
 

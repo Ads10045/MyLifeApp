@@ -114,21 +114,21 @@ export default function LoginScreen() {
           </View>
 
           {/* Social Login Buttons */}
-          <TouchableOpacity 
-            style={styles.googleButton}
-            onPress={() => Alert.alert('Google Login', 'OAuth nécessite un Development Build.\n\nPour tester: créez un compte avec email/mot de passe.')}
-          >
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleText}>Continuer avec Google</Text>
-          </TouchableOpacity>
+          <View style={styles.socialRow}>
+            <TouchableOpacity 
+              style={styles.socialButton}
+              onPress={() => Alert.alert('Google', 'OAuth nécessite un Development Build.')}
+            >
+              <Text style={styles.googleIcon}>G</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.facebookButton}
-            onPress={() => Alert.alert('Facebook Login', 'OAuth nécessite un Development Build.\n\nPour tester: créez un compte avec email/mot de passe.')}
-          >
-            <Text style={styles.facebookIcon}>f</Text>
-            <Text style={styles.facebookText}>Continuer avec Facebook</Text>
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.socialButton, styles.facebookBtn]}
+              onPress={() => Alert.alert('Facebook', 'OAuth nécessite un Development Build.')}
+            >
+              <Text style={styles.facebookIcon}>f</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -263,45 +263,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  googleButton: {
+  socialRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 20,
+  },
+  socialButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  facebookBtn: {
+    backgroundColor: '#1877F2',
+    borderColor: '#1877F2',
   },
   googleIcon: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#EA4335',
-    marginRight: 8,
-  },
-  googleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  facebookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1877F2',
-    borderRadius: 10,
-    padding: 10,
   },
   facebookIcon: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginRight: 8,
-  },
-  facebookText: {
-    fontSize: 13,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
 });
