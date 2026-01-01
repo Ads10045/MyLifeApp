@@ -233,8 +233,7 @@ export default function AdminScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Utilisateurs ({pagination.total})</Text>
           <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-            <UserPlus color="#FFF" size={16} />
-            <Text style={styles.addButtonText}>Ajouter</Text>
+            <UserPlus color="#FFF" size={18} />
           </TouchableOpacity>
         </View>
 

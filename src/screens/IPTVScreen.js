@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, Platform, ScrollView, Image, Linking, Modal, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Video, ResizeMode } from 'expo-av';
-import { Cast, ChevronUp, ChevronDown, List, Tv2, StopCircle } from 'lucide-react-native';
+import { Cast, ChevronUp, ChevronDown, List, Tv2, StopCircle, MonitorPlay } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS } from '../config/api';
 
@@ -177,7 +177,7 @@ export default function IPTVScreen() {
     if (Platform.OS === 'ios') {
       // On iOS, open Control Center instruction
       Alert.alert(
-        '📺 AirPlay',
+        'AirPlay',
         'Pour caster sur votre TV:\n\n1. Faites glisser depuis le coin supérieur droit pour ouvrir le Centre de contrôle\n2. Appuyez sur l\'icône Screen Mirroring\n3. Sélectionnez votre Apple TV ou TV compatible',
         [{ text: 'OK' }]
       );
@@ -203,7 +203,7 @@ export default function IPTVScreen() {
           />
         ) : (
           <View style={styles.channelLogoPlaceholder}>
-            <Text style={styles.channelIcon}>📺</Text>
+            <MonitorPlay color="#9CA3AF" size={24} />
           </View>
         )}
         <View style={styles.channelInfo}>
@@ -244,7 +244,10 @@ export default function IPTVScreen() {
       {/* Header with Cast Button - Hidden in landscape */}
       {Platform.OS !== 'web' && !isLandscape && (
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📺 IPTV</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+            <MonitorPlay color="#FFFFFF" size={20} />
+            <Text style={styles.headerTitle}>IPTV</Text>
+          </View>
           <View style={styles.headerButtons}>
             {selectedChannel && (
               <TouchableOpacity style={styles.headerStopButton} onPress={stopChannel}>
@@ -311,8 +314,7 @@ export default function IPTVScreen() {
                 style={styles.toggleButton}
                 onPress={toggleListMinimized}
               >
-                <List color="#FFFFFF" size={20} strokeWidth={2.5} />
-                <Text style={styles.toggleButtonText}>Chaînes</Text>
+                <List color="#FFFFFF" size={22} strokeWidth={2.5} />
               </TouchableOpacity>
             )}
         </View>
@@ -329,8 +331,7 @@ export default function IPTVScreen() {
                   style={styles.minimizeButton}
                   onPress={toggleListMinimized}
                 >
-                  <ChevronUp color="#FFFFFF" size={20} strokeWidth={2.5} />
-                  <Text style={styles.minimizeButtonText}>Minimiser</Text>
+                  <ChevronUp color="#FFFFFF" size={22} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
               
@@ -416,7 +417,10 @@ export default function IPTVScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.castModal}>
-            <Text style={styles.castModalTitle}>📺 Caster vers TV</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10}}>
+              <MonitorPlay color="#10B981" size={24} />
+              <Text style={styles.castModalTitle}>Caster vers TV</Text>
+            </View>
             
             <Text style={styles.castModalSubtitle}>
               {selectedChannel ? `Chaîne: ${selectedChannel.title}` : 'Aucune chaîne sélectionnée'}

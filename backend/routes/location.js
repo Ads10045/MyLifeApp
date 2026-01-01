@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const authMiddleware = require('../middleware/auth');
 
@@ -27,6 +28,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     const location = await prisma.location.create({
       data: {
+        id: crypto.randomUUID(), // Generate UUID for ID
         userId: req.userId,
         latitude,
         longitude,
@@ -41,7 +43,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
     res.json(location);
   } catch (error) {
-    console.error(error);
+    console.error('Location save error:', error);
     res.status(500).json({ error: 'Erreur lors de la sauvegarde' });
   }
 });

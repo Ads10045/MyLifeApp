@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Platform, TextInput, Linking, Modal, ScrollView } from 'react-native';
-import { Save, MapPin, Navigation, Route, X, Map, Satellite, Globe2, User, Trash2, ChevronDown, ChevronUp, Compass, Layers, BookmarkPlus, Crosshair, Navigation2, LocateFixed, Play, Square, ArrowRight, Clock, Ruler } from 'lucide-react-native';
+import { Save, MapPin, Navigation, Route, X, Map, Satellite, Globe2, User, Trash2, ChevronDown, ChevronUp, Compass, Layers, BookmarkPlus, Crosshair, Navigation2, LocateFixed, Play, Square, ArrowRight, Clock, Ruler, Car, Footprints, Bike } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS } from '../config/api';
@@ -32,6 +32,7 @@ export default function GPSScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [routeSteps, setRouteSteps] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [transportMode, setTransportMode] = useState('driving'); // 'driving', 'walking', 'cycling'
   const locationSubscription = useRef(null);
   
   // Dynamic imports for maps
@@ -317,8 +318,10 @@ export default function GPSScreen() {
     }
 
     try {
+      // OSRM modes: driving, walking, cycling (bike = cycling for OSRM)
+      const osrmMode = transportMode === 'cycling' ? 'bike' : transportMode;
       const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${departureCoords.longitude},${departureCoords.latitude};${destinationCoords.longitude},${destinationCoords.latitude}?overview=full&geometries=geojson&steps=true`
+        `https://router.project-osrm.org/route/v1/${osrmMode}/${departureCoords.longitude},${departureCoords.latitude};${destinationCoords.longitude},${destinationCoords.latitude}?overview=full&geometries=geojson&steps=true`
       );
       
       const data = await response.json();
@@ -1011,6 +1014,34 @@ export default function GPSScreen() {
                 </View>
               )}
 
+              {/* Transport Mode Selector */}
+              <Text style={styles.inputLabel}>🚗 Mode de transport</Text>
+              <View style={styles.transportModeContainer}>
+                <TouchableOpacity 
+                  style={[styles.transportModeBtn, transportMode === 'driving' && styles.transportModeBtnActive]}
+                  onPress={() => setTransportMode('driving')}
+                >
+                  <Car color={transportMode === 'driving' ? '#FFFFFF' : '#6B7280'} size={22} />
+                  <Text style={[styles.transportModeText, transportMode === 'driving' && styles.transportModeTextActive]}>Voiture</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.transportModeBtn, transportMode === 'walking' && styles.transportModeBtnActive]}
+                  onPress={() => setTransportMode('walking')}
+                >
+                  <Footprints color={transportMode === 'walking' ? '#FFFFFF' : '#6B7280'} size={22} />
+                  <Text style={[styles.transportModeText, transportMode === 'walking' && styles.transportModeTextActive]}>À pied</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.transportModeBtn, transportMode === 'cycling' && styles.transportModeBtnActive]}
+                  onPress={() => setTransportMode('cycling')}
+                >
+                  <Bike color={transportMode === 'cycling' ? '#FFFFFF' : '#6B7280'} size={22} />
+                  <Text style={[styles.transportModeText, transportMode === 'cycling' && styles.transportModeTextActive]}>Moto/Vélo</Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity 
                 style={[styles.planButton, !destinationCoords && styles.planButtonDisabled]}
                 onPress={planRoute}
@@ -1594,5 +1625,38 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     padding: 16,
     textAlign: 'center',
+  },
+  
+  // Transport Mode Selector
+  transportModeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 8,
+  },
+  transportModeBtn: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    gap: 4,
+  },
+  transportModeBtnActive: {
+    backgroundColor: '#10B981',
+    borderColor: '#059669',
+  },
+  transportModeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  transportModeTextActive: {
+    color: '#FFFFFF',
   },
 });
