@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS } from '../config/api';
+import { Search, ChevronLeft, ChevronRight, UserPlus, RefreshCw } from 'lucide-react-native';
 
 export default function AdminScreen() {
   const { user, token } = useAuth();
@@ -12,6 +13,11 @@ export default function AdminScreen() {
   const [editMode, setEditMode] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Pagination & Search state
+  const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, totalPages: 1 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
+
   // Form state
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -19,60 +25,53 @@ export default function AdminScreen() {
   const [userRole, setUserRole] = useState('USER');
 
   useEffect(() => {
-    // Debug logs
-    console.log('AdminScreen Mounted');
-    console.log('User Role:', user?.role);
-    console.log('Token check:', token ? 'Token exists' : 'No token');
-
     if (user?.role === 'ADMIN' && token) {
       loadData();
-    } else {
-        console.warn('Condition failed for loadData:', { role: user?.role, hasToken: !!token });
     }
   }, [user, token]);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    const timeout = setTimeout(() => {
+      fetchUsers(1, pagination.limit, searchQuery);
+    }, 300);
+    setSearchTimeout(timeout);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('Loading Data...');
-      await Promise.all([fetchUsers(), fetchStats()]);
-      console.log('Data loading complete');
+      await Promise.all([fetchUsers(1, pagination.limit, ''), fetchStats()]);
     } catch (error) {
-      console.error('LoadData error:', error);
       Alert.alert('Erreur', 'Impossible de charger les données');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1, limit = 5, search = '') => {
     try {
-      console.log('Fetching users from:', API_ENDPOINTS.ADMIN.USERS);
-      const response = await fetch(API_ENDPOINTS.ADMIN.USERS, {
+      const url = `${API_ENDPOINTS.ADMIN.USERS}?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`;
+      const response = await fetch(url, {
         headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
         },
       });
-      console.log('Fetch Users Status:', response.status);
       
       const data = await response.json();
-      console.log('Fetch Users Data:', JSON.stringify(data).substring(0, 100) + '...'); // Log first 100 chars
       
-      if (response.ok) {
-        if (Array.isArray(data)) {
-            setUsers(data);
-        } else {
-            console.error('Data is not an array:', data);
-            setUsers([]);
-        }
-      } else {
-        console.error('Fetch users failed:', data);
-        Alert.alert('Erreur Chargement', data.error || 'Impossible de récupérer les utilisateurs');
+      if (response.ok && data.users) {
+        setUsers(data.users);
+        setPagination(data.pagination);
+      } else if (response.ok && Array.isArray(data)) {
+        // Fallback for old API format
+        setUsers(data);
       }
     } catch (error) {
       console.error('Fetch users error:', error);
-      Alert.alert('Erreur Connexion', error.message);
     }
   };
 
@@ -85,6 +84,12 @@ export default function AdminScreen() {
       if (response.ok) setStats(data);
     } catch (error) {
       console.error('Fetch stats error:', error);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchUsers(newPage, pagination.limit, searchQuery);
     }
   };
 
@@ -105,8 +110,8 @@ export default function AdminScreen() {
         if (!userPassword) delete body.password;
       } else {
         if (!userPassword) {
-            Alert.alert('Erreur', 'Mot de passe obligatoire pour la création');
-            return;
+          Alert.alert('Erreur', 'Mot de passe obligatoire');
+          return;
         }
       }
 
@@ -120,45 +125,37 @@ export default function AdminScreen() {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de la sauvegarde');
-      }
+      if (!response.ok) throw new Error(data.error || 'Erreur');
 
       Alert.alert('Succès', editMode ? 'Utilisateur modifié' : 'Utilisateur créé');
       setModalVisible(false);
       resetForm();
-      fetchUsers();
+      fetchUsers(pagination.page, pagination.limit, searchQuery);
     } catch (error) {
       Alert.alert('Erreur', error.message);
     }
   };
 
   const handleDeleteUser = (id) => {
-    Alert.alert(
-      'Confirmer',
-      'Supprimer cet utilisateur ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(`${API_ENDPOINTS.ADMIN.USERS}/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` },
-              });
-              if (!response.ok) throw new Error('Erreur suppression');
-              fetchUsers();
-              Alert.alert('Succès', 'Utilisateur supprimé');
-            } catch (error) {
-                Alert.alert('Erreur', error.message);
-            }
-          },
+    Alert.alert('Confirmer', 'Supprimer cet utilisateur ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await fetch(`${API_ENDPOINTS.ADMIN.USERS}/${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` },
+            });
+            fetchUsers(pagination.page, pagination.limit, searchQuery);
+            Alert.alert('Succès', 'Utilisateur supprimé');
+          } catch (error) {
+            Alert.alert('Erreur', error.message);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const openAddModal = () => {
@@ -167,12 +164,12 @@ export default function AdminScreen() {
     setModalVisible(true);
   };
 
-  const openEditModal = (user) => {
+  const openEditModal = (u) => {
     setEditMode(true);
-    setCurrentUser(user);
-    setUserName(user.name);
-    setUserEmail(user.email);
-    setUserRole(user.role);
+    setCurrentUser(u);
+    setUserName(u.name);
+    setUserEmail(u.email);
+    setUserRole(u.role);
     setUserPassword('');
     setModalVisible(true);
   };
@@ -198,7 +195,7 @@ export default function AdminScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>🛠️ Admin Dashboard</Text>
         <TouchableOpacity style={styles.refreshButton} onPress={loadData}>
-          <Text style={styles.refreshButtonText}>🔄</Text>
+          <RefreshCw color="#6B7280" size={20} />
         </TouchableOpacity>
       </View>
 
@@ -221,11 +218,24 @@ export default function AdminScreen() {
           </View>
         )}
 
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Search color="#9CA3AF" size={20} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher un utilisateur..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+
         <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Gestion Utilisateurs ({users.length})</Text>
-            <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-                <Text style={styles.addButtonText}>+ Ajouter</Text>
-            </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Utilisateurs ({pagination.total})</Text>
+          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+            <UserPlus color="#FFF" size={16} />
+            <Text style={styles.addButtonText}>Ajouter</Text>
+          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -233,26 +243,51 @@ export default function AdminScreen() {
         ) : (
           users.map((item) => (
             <View key={item.id} style={styles.userCard}>
-                <View style={styles.userInfo}>
+              <View style={styles.userInfo}>
                 <View style={styles.nameRow}>
-                    <Text style={styles.userName}>{item.name}</Text>
-                    {item.role === 'ADMIN' && <Text style={styles.adminBadge}>ADMIN</Text>}
+                  <Text style={styles.userName}>{item.name}</Text>
+                  {item.role === 'ADMIN' && <Text style={styles.adminBadge}>ADMIN</Text>}
                 </View>
                 <Text style={styles.userEmail}>{item.email}</Text>
                 <Text style={styles.userDetails}>
-                    Commandes: {item._count?.orders || 0} • GPS: {item._count?.locations || 0}
+                  Commandes: {item._count?.Order || 0} • GPS: {item._count?.Location || 0}
                 </Text>
-                </View>
-                <View style={styles.actions}>
+              </View>
+              <View style={styles.actions}>
                 <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconButton}>
-                    <Text style={styles.iconText}>✏️</Text>
+                  <Text style={styles.iconText}>✏️</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleDeleteUser(item.id)} style={styles.iconButton}>
-                    <Text style={styles.iconText}>🗑️</Text>
+                  <Text style={styles.iconText}>🗑️</Text>
                 </TouchableOpacity>
-                </View>
+              </View>
             </View>
           ))
+        )}
+
+        {/* Pagination Controls */}
+        {pagination.totalPages > 1 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity 
+              style={[styles.pageBtn, pagination.page === 1 && styles.pageBtnDisabled]}
+              disabled={pagination.page === 1}
+              onPress={() => handlePageChange(pagination.page - 1)}
+            >
+              <ChevronLeft size={20} color={pagination.page === 1 ? "#9CA3AF" : "#374151"} />
+            </TouchableOpacity>
+            
+            <View style={styles.pageInfo}>
+              <Text style={styles.pageText}>Page {pagination.page} / {pagination.totalPages}</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.pageBtn, pagination.page >= pagination.totalPages && styles.pageBtnDisabled]}
+              disabled={pagination.page >= pagination.totalPages}
+              onPress={() => handlePageChange(pagination.page + 1)}
+            >
+              <ChevronRight size={20} color={pagination.page >= pagination.totalPages ? "#9CA3AF" : "#374151"} />
+            </TouchableOpacity>
+          </View>
         )}
         
         <View style={{height: 100}} />
@@ -364,4 +399,15 @@ const styles = StyleSheet.create({
   
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 20 },
   accessDeniedText: { fontSize: 24, fontWeight: 'bold', color: '#DC2626' },
+
+  // Search
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  searchInput: { flex: 1, marginLeft: 12, fontSize: 16, color: '#111827' },
+
+  // Pagination
+  paginationContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 20, gap: 16 },
+  pageBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  pageBtnDisabled: { opacity: 0.5, backgroundColor: '#F9FAFB' },
+  pageInfo: { backgroundColor: '#FFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB' },
+  pageText: { color: '#374151', fontWeight: '600', fontSize: 14 },
 });

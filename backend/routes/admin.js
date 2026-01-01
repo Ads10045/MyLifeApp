@@ -24,10 +24,26 @@ const adminMiddleware = async (req, res, next) => {
   }
 };
 
-// Get all users (admin only)
+// Get all users (admin only) with pagination and search
 router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    const { page = 1, limit = 10, search = '' } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Build search filter
+    const where = search ? {
+      OR: [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
+      ]
+    } : {};
+
+    // Get total count for pagination
+    const total = await prisma.user.count({ where });
+
     const users = await prisma.user.findMany({
+      where,
       select: {
         id: true,
         name: true,
@@ -36,15 +52,25 @@ router.get('/users', authMiddleware, adminMiddleware, async (req, res) => {
         createdAt: true,
         _count: {
           select: {
-            orders: true,
-            locations: true,
+            Order: true,
+            Location: true,
           },
         },
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take,
     });
 
-    res.json(users);
+    res.json({
+      users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / take)
+      }
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Erreur serveur' });
