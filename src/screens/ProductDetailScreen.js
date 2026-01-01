@@ -1,166 +1,50 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, useWindowDimensions, Linking } from 'react-native';
-import { ArrowLeft, Star, Heart, ShoppingCart, Zap, Share2, Truck, Shield, RotateCcw, CreditCard, Banknote, ExternalLink } from 'lucide-react-native';
+import { ArrowLeft, Star, Heart, Share2, Truck, Shield, RotateCcw, ExternalLink, ShoppingBag } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { PAYMENT_CONFIG, convertToLocal } from '../config/payment';
 import { getAffiliateLink, isAffiliateable } from '../config/affiliate';
 
-export default function ProductDetailScreen({ product, onBack, onAddToCart }) {
+export default function ProductDetailScreen({ product, onBack }) {
   const { width } = useWindowDimensions();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [quantity, setQuantity] = useState(1);
-  const [showPayment, setShowPayment] = useState(false);
+
+  const isLargeScreen = width > 768;
 
   // Use product.images from API/database, or fallback to single imageUrl
   const images = (product.images && product.images.length > 0) 
     ? product.images 
     : [product.imageUrl];
 
-  const totalPrice = (product.price * quantity).toFixed(2);
-  const totalPriceLocal = convertToLocal(product.price * quantity);
-
-  const handleBuyNow = () => {
-    setShowPayment(true);
-  };
-
-  const processPayment = (method) => {
-    if (method === 'card') {
-      Alert.alert(
-        '💳 Paiement par Carte',
-        `Montant: ${totalPrice} €\n\n${PAYMENT_CONFIG.messages.cardSuccess}`,
-        [{ text: 'Confirmer', onPress: () => {
-          Alert.alert('✅ Paiement Réussi !', PAYMENT_CONFIG.messages.cardSuccess);
-          onBack();
-        }}]
-      );
-    } else if (method === 'paypal') {
-      Alert.alert(
-        '🅿️ PayPal',
-        `Montant: ${totalPrice} €\n\nEnvoi vers: ${PAYMENT_CONFIG.paypal.email}`,
-        [{ text: 'Confirmer', onPress: () => {
-          Alert.alert('✅ PayPal', PAYMENT_CONFIG.messages.paypalSuccess);
-          onBack();
-        }}]
-      );
-    } else if (method === 'cash') {
-      const cod = PAYMENT_CONFIG.cashOnDelivery;
-      Alert.alert(
-        '💵 Paiement à la Livraison',
-        `Montant: ${totalPriceLocal} DH\n\nContact: ${cod.contactName}\nTél: ${cod.contactPhone}\n\n${cod.instructions}`,
-        [{ text: 'Confirmer', onPress: () => {
-          Alert.alert('✅ Commande Confirmée !', PAYMENT_CONFIG.messages.cashSuccess);
-          onBack();
-        }}]
-      );
-    } else if (method === 'bank') {
-      const bank = PAYMENT_CONFIG.bankTransfer;
-      Alert.alert(
-        '🏦 Virement Bancaire',
-        `Montant: ${totalPrice} €\n\nBénéficiaire: ${bank.beneficiaryName}\nIBAN: ${bank.iban}\nBIC: ${bank.bic}\nBanque: ${bank.bankName}\n\n${PAYMENT_CONFIG.messages.bankInstructions}`,
-        [{ text: 'J\'ai compris', onPress: () => onBack() }]
-      );
+  // Open affiliate link
+  const handleBuyOnAmazon = () => {
+    const affiliateUrl = getAffiliateLink(product);
+    const urlToOpen = affiliateUrl || product.sourceUrl;
+    
+    if (!urlToOpen) {
+      Alert.alert('Erreur', 'Pas de lien disponible pour ce produit');
+      return;
     }
-    setShowPayment(false);
+    
+    console.log('Opening Affiliate URL:', urlToOpen);
+    Linking.openURL(urlToOpen).catch(err => {
+      console.error('Failed to open URL:', err);
+      Alert.alert('Erreur', 'Impossible d\'ouvrir le lien');
+    });
   };
 
-  if (showPayment) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.paymentHeader}>
-          <TouchableOpacity onPress={() => setShowPayment(false)} style={styles.backButton}>
-            <ArrowLeft color="#111827" size={24} />
-          </TouchableOpacity>
-          <Text style={styles.paymentTitle}>Mode de Paiement</Text>
-        </View>
-
-        <ScrollView style={styles.paymentContent}>
-          {/* Order Summary */}
-          <View style={styles.orderSummary}>
-            <Image source={{ uri: product.imageUrl }} style={styles.summaryImage} />
-            <View style={styles.summaryInfo}>
-              <Text style={styles.summaryName} numberOfLines={2}>{product.name}</Text>
-              <Text style={styles.summaryQty}>Quantité: {quantity}</Text>
-              <Text style={styles.summaryTotal}>{(product.price * quantity).toFixed(2)} €</Text>
-            </View>
-          </View>
-
-          {/* Payment Methods */}
-          <Text style={styles.sectionTitle}>Choisir un mode de paiement</Text>
-
-          <TouchableOpacity style={styles.paymentOption} onPress={() => processPayment('card')}>
-            <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={styles.paymentIcon}>
-              <CreditCard color="#FFFFFF" size={24} />
-            </LinearGradient>
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentName}>Carte Bancaire</Text>
-              <Text style={styles.paymentDesc}>Visa, Mastercard, CB</Text>
-            </View>
-            <ArrowLeft color="#9CA3AF" size={20} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.paymentOption} onPress={() => processPayment('paypal')}>
-            <View style={[styles.paymentIconPlain, { backgroundColor: '#0070BA' }]}>
-              <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>P</Text>
-            </View>
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentName}>PayPal</Text>
-              <Text style={styles.paymentDesc}>Paiement sécurisé</Text>
-            </View>
-            <ArrowLeft color="#9CA3AF" size={20} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.paymentOption} onPress={() => processPayment('cash')}>
-            <LinearGradient colors={['#10B981', '#059669']} style={styles.paymentIcon}>
-              <Banknote color="#FFFFFF" size={24} />
-            </LinearGradient>
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentName}>Paiement à la Livraison</Text>
-              <Text style={styles.paymentDesc}>Cash on Delivery</Text>
-            </View>
-            <ArrowLeft color="#9CA3AF" size={20} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.paymentOption} onPress={() => processPayment('bank')}>
-            <LinearGradient colors={['#8B5CF6', '#7C3AED']} style={styles.paymentIcon}>
-              <CreditCard color="#FFFFFF" size={24} />
-            </LinearGradient>
-            <View style={styles.paymentInfo}>
-              <Text style={styles.paymentName}>Virement Bancaire</Text>
-              <Text style={styles.paymentDesc}>IBAN / SWIFT</Text>
-            </View>
-            <ArrowLeft color="#9CA3AF" size={20} style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-
-          {/* Security Info */}
-          <View style={styles.securityInfo}>
-            <Shield color="#10B981" size={20} />
-            <Text style={styles.securityText}>Paiement 100% sécurisé • Protection acheteur</Text>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
-
-  const isLargeScreen = width >= 1024;
-
-  const renderActionButtons = () => (
-    <View style={isLargeScreen ? styles.desktopActions : styles.bottomBar}>
-      <TouchableOpacity 
-        style={styles.addToCartBtn}
-        onPress={() => {
-          onAddToCart(product, quantity);
-          Alert.alert('✅ Ajouté !', `${quantity}x ${product.name} ajouté au panier.`);
-        }}
-      >
-        <ShoppingCart color="#F97316" size={22} />
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.buyNowBtn} onPress={handleBuyNow}>
-        <Zap color="#FFFFFF" size={20} fill="#FFFFFF" />
-        <Text style={styles.buyNowText}>Acheter • {(product.price * quantity).toFixed(2)} €</Text>
-      </TouchableOpacity>
-    </View>
+  // Render main buy button
+  const renderBuyButton = () => (
+    <TouchableOpacity 
+      style={[styles.buyNowBtn, isLargeScreen && styles.buyNowBtnDesktop]} 
+      onPress={handleBuyOnAmazon}
+    >
+      <ShoppingBag color="#FFFFFF" size={22} />
+      <Text style={styles.buyNowText}>
+        {isAffiliateable(product.sourceUrl) ? 'Acheter sur Amazon' : 'Voir le produit'}
+      </Text>
+      <ExternalLink color="#FFFFFF" size={18} />
+    </TouchableOpacity>
   );
 
   return (
@@ -207,80 +91,43 @@ export default function ProductDetailScreen({ product, onBack, onAddToCart }) {
           </View>
         </View>
 
-        {/* RIGHT COLUMN: Details */}
-        <View style={[styles.productInfo, isLargeScreen && styles.rightColumn]}>
-          {/* Price Row */}
+        {/* RIGHT COLUMN: Product Info */}
+        <View style={isLargeScreen ? styles.rightColumn : styles.productInfo}>
+          
+          {/* Price */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>{product.price?.toFixed(2)} €</Text>
-            <Text style={styles.oldPrice}>{(product.price * 1.4)?.toFixed(2)} €</Text>
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>-30%</Text>
-            </View>
+            {product.originalPrice && (
+              <>
+                <Text style={styles.oldPrice}>{product.originalPrice.toFixed(2)} €</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>
+                    -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Name */}
           <Text style={styles.name}>{product.name}</Text>
 
-          {/* Rating & Sales */}
+          {/* Rating & Supplier */}
           <View style={styles.metaRow}>
             <View style={styles.ratingBox}>
-              <Star color="#FFD700" size={16} fill="#FFD700" />
+              <Star color="#F59E0B" size={14} fill="#F59E0B" />
               <Text style={styles.ratingText}>{product.rating || 4.5}</Text>
             </View>
-            <Text style={styles.salesText}>500+ ventes</Text>
             <Text style={styles.salesText}>500+ ventes</Text>
             <Text style={styles.supplierText}>par {product.supplier}</Text>
           </View>
 
-          {/* Source Link - Now with Amazon Affiliate Tag! */}
-          {product.sourceUrl && (
-            <TouchableOpacity 
-              style={styles.sourceLink} 
-              onPress={() => {
-                // Get affiliate link (adds Amazon tag if applicable)
-                const affiliateUrl = getAffiliateLink(product);
-                const urlToOpen = affiliateUrl || product.sourceUrl;
-                
-                console.log('Opening Affiliate URL:', urlToOpen);
-                
-                if (!urlToOpen) {
-                  Alert.alert('Erreur', 'Pas de lien disponible');
-                  return;
-                }
-                
-                Linking.openURL(urlToOpen).catch(err => {
-                  console.error('Failed to open URL:', err);
-                  Alert.alert('Erreur', 'Impossible d\'ouvrir le lien: ' + err.message);
-                });
-              }}
-            >
-              <ExternalLink size={14} color="#3B82F6" />
-              <Text style={styles.sourceLinkText}>
-                {isAffiliateable(product.sourceUrl) ? '🛒 Acheter sur Amazon' : `Voir sur ${product.supplier}`}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Quantity Selector */}
-          <View style={styles.quantityRow}>
-            <Text style={styles.quantityLabel}>Quantité :</Text>
-            <View style={styles.quantitySelector}>
-              <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}>
-                <Text style={styles.qtyBtnText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.qtyValue}>{quantity}</Text>
-              <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}>
-                <Text style={styles.qtyBtnText}>+</Text>
-              </TouchableOpacity>
+          {/* Buy Button (Desktop) */}
+          {isLargeScreen && (
+            <View style={styles.desktopActionContainer}>
+              {renderBuyButton()}
             </View>
-          </View>
-
-           {/* Desktop Action Buttons Placement */}
-           {isLargeScreen && (
-             <View style={styles.desktopActionContainer}>
-               {renderActionButtons()}
-             </View>
-           )}
+          )}
 
           {/* Description */}
           <View style={styles.section}>
@@ -303,13 +150,25 @@ export default function ProductDetailScreen({ product, onBack, onAddToCart }) {
               <Text style={styles.featureText}>Retour facile</Text>
             </View>
           </View>
+
+          {/* Affiliate Notice */}
+          <View style={styles.affiliateNotice}>
+            <Text style={styles.affiliateNoticeText}>
+              💡 En cliquant sur "Acheter", vous serez redirigé vers le site du vendeur. 
+              Nous pouvons percevoir une commission sur les ventes.
+            </Text>
+          </View>
         </View>
         
         {!isLargeScreen && <View style={{ height: 100 }} />}
       </ScrollView>
 
       {/* Mobile Action Bar (Fixed at bottom) */}
-      {!isLargeScreen && renderActionButtons()}
+      {!isLargeScreen && (
+        <View style={styles.bottomBar}>
+          {renderBuyButton()}
+        </View>
+      )}
     </View>
   );
 }
@@ -351,17 +210,8 @@ const styles = StyleSheet.create({
   salesText: { fontSize: 13, color: '#6B7280' },
   supplierText: { fontSize: 13, color: '#F97316' },
 
-  // Quantity
-  quantityRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 16 },
-  quantityLabel: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  quantitySelector: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 10 },
-  qtyBtn: { paddingHorizontal: 16, paddingVertical: 10 },
-  qtyBtnText: { fontSize: 20, fontWeight: 'bold', color: '#F97316' },
-  qtyValue: { fontSize: 16, fontWeight: 'bold', paddingHorizontal: 16 },
-
   // Desktop Actions
   desktopActionContainer: { marginBottom: 32, paddingVertical: 10 },
-  desktopActions: { flexDirection: 'row', gap: 16 },
 
   // Section
   section: { marginBottom: 24 },
@@ -369,36 +219,19 @@ const styles = StyleSheet.create({
   description: { fontSize: 15, color: '#4B5563', lineHeight: 24 },
 
   // Features
-  features: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#F9FAFB', padding: 20, borderRadius: 16 },
+  features: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#F9FAFB', padding: 20, borderRadius: 16, marginBottom: 20 },
   feature: { alignItems: 'center', gap: 8 },
   featureText: { fontSize: 12, color: '#6B7280', textAlign: 'center' },
 
   // Bottom Bar (Mobile)
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', padding: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F3F4F6', gap: 12 },
-  addToCartBtn: { width: 56, height: 56, backgroundColor: '#FFF7ED', borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F97316' },
-  buyNowBtn: { flex: 1, flexDirection: 'row', backgroundColor: '#F97316', borderRadius: 16, justifyContent: 'center', alignItems: 'center', gap: 8, height: 56 },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  
+  // Buy Button
+  buyNowBtn: { flexDirection: 'row', backgroundColor: '#F97316', borderRadius: 16, justifyContent: 'center', alignItems: 'center', gap: 10, height: 56, paddingHorizontal: 24 },
+  buyNowBtnDesktop: { alignSelf: 'flex-start', paddingHorizontal: 32 },
   buyNowText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
 
-  // Payment Screen
-  paymentHeader: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 50, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6, gap: 16' },
-  paymentTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
-  paymentContent: { flex: 1, padding: 20 },
-  orderSummary: { flexDirection: 'row', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginBottom: 24, gap: 16 },
-  summaryImage: { width: 80, height: 80, borderRadius: 8 },
-  summaryInfo: { flex: 1, justifyContent: 'center' },
-  summaryName: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 4 },
-  summaryQty: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
-  summaryTotal: { fontSize: 18, fontWeight: 'bold', color: '#DC2626' },
-  paymentOption: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 16 },
-  paymentIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  paymentIconPlain: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  paymentInfo: { flex: 1 },
-  paymentName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  paymentDesc: { fontSize: 12, color: '#6B7280' },
-  securityInfo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 24, gap: 8 },
-  securityText: { fontSize: 12, color: '#6B7280' },
-
-  // Source Link
-  sourceLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16, padding: 8, backgroundColor: '#EFF6FF', alignSelf: 'flex-start', borderRadius: 8 },
-  sourceLinkText: { color: '#3B82F6', fontSize: 12, fontWeight: '600', textDecorationLine: 'underline' },
+  // Affiliate Notice
+  affiliateNotice: { backgroundColor: '#FEF3C7', padding: 12, borderRadius: 12, marginTop: 16 },
+  affiliateNoticeText: { fontSize: 12, color: '#92400E', lineHeight: 18, textAlign: 'center' },
 });

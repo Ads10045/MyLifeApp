@@ -1,158 +1,105 @@
-# 💰 Stratégies de Monétisation - NutriPlusApp
+# 💰 Guide de Monétisation - NutriPlusApp
 
-## Vue d'ensemble
+## Sites d'affiliation supportés
 
-Vous affichez des produits Amazon/AliExpress dans votre app. Voici comment gagner de l'argent comme intermédiaire.
+### ✅ Configurés (Actifs)
 
----
+| Site | Région | Tag/ID | Commission |
+|------|--------|--------|------------|
+| Amazon US | 🇺🇸 | `nutriplusapp2-21` | 1-10% |
+| Amazon ES | 🇪🇸 | `nutriplusap07-21` | 1-10% |
+| Amazon DE | 🇩🇪 | `nutriplusap0f-21` | 1-10% |
+| Amazon UK | 🇬🇧 | `nutriplusa0c7-21` | 1-10% |
+| Amazon IT | 🇮🇹 | `nutriplusap0e-21` | 1-10% |
 
-## 1. Programme d'Affiliation Amazon Associates ⭐ (Recommandé)
+### ⏳ À configurer
 
-### Comment ça marche
-- Vous obtenez un **tag d'affilié unique** (ex: `votreapp-21`)
-- Chaque lien produit inclut votre tag
-- Quand un utilisateur clique et achète → **vous gagnez une commission**
-
-### Commissions par catégorie
-| Catégorie | Commission |
-|-----------|------------|
-| Mode, Beauté | 10% |
-| Maison, Jardin | 7% |
-| Électronique | 3-4% |
-| Alimentaire | 1-3% |
-
-### Format du lien affilié
-```
-https://www.amazon.fr/dp/B0XXXXX?tag=votreapp-21
-```
-
-### Avantages
-- ✅ Aucun stock à gérer
-- ✅ Aucune gestion des commandes
-- ✅ Amazon gère le paiement et la livraison
-- ✅ Cookie de 24h (l'utilisateur peut acheter autre chose)
+| Site | Commission | Inscription |
+|------|------------|-------------|
+| **AliExpress** | 3-8% | [portals.aliexpress.com](https://portals.aliexpress.com) |
+| **eBay** | 1-4% | [partnernetwork.ebay.com](https://partnernetwork.ebay.com) |
+| **Cdiscount** | 2-5% | [affiliation.cdiscount.com](https://affiliation.cdiscount.com) |
+| **iHerb** | 5-10% | [iherb.com/info/partners](https://www.iherb.com/info/partners) |
+| **MyProtein** | 8% | Programme affilié MyProtein |
+| **Decathlon** | 3-5% | Via [Awin](https://www.awin.com) |
+| **Fnac** | 2-4% | Via [Awin](https://www.awin.com) ou Tradedoubler |
+| **Rakuten** | Variable | [rakutenadvertising.com](https://rakutenadvertising.com) |
+| **Bulk** | 5-8% | Programme affilié Bulk |
 
 ---
 
-## 2. Comment obtenir votre lien d'affiliation Amazon
+## Comment activer un nouveau site
 
-### Étape 1 : S'inscrire à Amazon Associates
-1. Allez sur **https://partenaires.amazon.fr** (France) ou **https://affiliate-program.amazon.com** (US)
-2. Cliquez sur **"Inscrivez-vous gratuitement"**
-3. Connectez-vous avec votre compte Amazon (ou créez-en un)
+### 1. Inscrivez-vous au programme
 
-### Étape 2 : Remplir le formulaire
-1. **Informations personnelles** : Nom, adresse, téléphone
-2. **Informations sur le site/app** :
-   - URL de votre app (si publiée) ou site web
-   - Description : "Application mobile de shopping avec produits nutrition et lifestyle"
-   - Catégories : Santé, Nutrition, Shopping
-3. **Identifiant de suivi** : Choisissez un nom simple comme `nutriplusapp-21`
+Visitez le lien d'inscription dans le tableau ci-dessus.
 
-### Étape 3 : Validation
-- Amazon examine votre candidature (1-3 jours)
-- Vous devez générer **3 ventes qualifiées en 180 jours** pour validation définitive
+### 2. Obtenez votre ID
 
-### Étape 4 : Obtenir vos liens
-Une fois approuvé :
-1. Allez sur n'importe quel produit Amazon
-2. Utilisez la barre d'outils "SiteStripe" en haut
-3. Cliquez sur **"Texte"** → copiez le lien avec votre tag
+Après validation, récupérez votre :
+- **Tag** (Amazon)
+- **Tracking ID** (AliExpress)
+- **Campaign ID** (eBay)
+- **Code promo** (iHerb)
 
----
+### 3. Configurez dans l'app
 
-## 3. AliExpress Affiliate Program
+Modifiez `src/config/affiliate.js` :
 
-### Inscription
-- URL : **https://portals.aliexpress.com**
-- Commission : 3-8% selon catégorie
-
-### Avantages
-- Produits moins chers
-- Plus de marge potentielle
-- Bon pour le dropshipping
-
----
-
-## 4. Dropshipping (Alternative)
-
-### Comment ça marche
-1. L'utilisateur voit le prix : **29.99€** (votre prix)
-2. L'utilisateur achète sur VOTRE app
-3. Vous commandez chez AliExpress : **15€** (prix fournisseur)
-4. **Marge : 14.99€**
-
-### Ce qu'il faut
-- Intégration paiement (Stripe, PayPal)
-- Gestion des commandes
-- Service client
-- Gestion des retours
-
-### Risques
-- Délais de livraison longs (Chine → Europe : 15-30 jours)
-- Qualité variable
-- SAV à gérer
-
----
-
-## 5. Modèle Hybride (Ma Recommandation) 🎯
-
-| Source | Méthode | Pourquoi |
-|--------|---------|----------|
-| Amazon | Affiliation | Livraison rapide, confiance client |
-| AliExpress | Dropshipping | Marge plus élevée |
-| Dans l'app | Publicités AdMob | Revenus passifs |
-
----
-
-## 6. Implémentation technique dans NutriPlusApp
-
-### Pour l'affiliation Amazon
-1. Stocker votre tag dans `src/config/affiliate.js`
-2. Modifier `ProductDetailScreen.js` : bouton "Acheter" → ouvre le lien avec tag
-3. Tracker les clics (optionnel mais recommandé)
-
-### Exemple de code
 ```javascript
-// src/config/affiliate.js
-export const AFFILIATE_CONFIG = {
-  amazon: {
-    tag: 'nutriplusapp-21',
-    baseUrl: 'https://www.amazon.fr/dp/'
-  },
-  aliexpress: {
-    trackingId: 'VOTRE_ID',
-    baseUrl: 'https://www.aliexpress.com/item/'
-  }
-};
+// Exemple pour AliExpress
+aliexpress: {
+  trackingId: 'VOTRE_ID_ICI', // ← Ajoutez votre ID
+  baseUrl: 'https://www.aliexpress.com/',
+  paramName: 'aff_id',
+},
 
-// Générer un lien affilié
-export const getAffiliateLink = (product) => {
-  if (product.source === 'amazon') {
-    return `${AFFILIATE_CONFIG.amazon.baseUrl}${product.asin}?tag=${AFFILIATE_CONFIG.amazon.tag}`;
-  }
-  return product.sourceUrl;
-};
+// Exemple pour iHerb
+iherb: {
+  code: 'VOTRE_CODE', // ← Votre code promo
+  baseUrl: 'https://www.iherb.com/',
+  paramName: 'rcode',
+},
+```
+
+### 4. Testez
+
+L'app détecte automatiquement le site et ajoute votre tag !
+
+---
+
+## Fonctionnement technique
+
+```
+Utilisateur clique "Acheter sur Amazon"
+         ↓
+App détecte: amazon.de → région DE
+         ↓
+Ajoute le tag: ?tag=nutriplusap0f-21
+         ↓
+Ouvre le lien avec votre affiliation
+         ↓
+Utilisateur achète → Vous gagnez la commission 💰
 ```
 
 ---
 
-## 7. Ressources
+## Fichiers concernés
 
-- **Amazon Associates France** : https://partenaires.amazon.fr
-- **Amazon Associates US** : https://affiliate-program.amazon.com
-- **AliExpress Portals** : https://portals.aliexpress.com
-- **Guide des commissions Amazon** : https://partenaires.amazon.fr/help/node/topic/GRXPHT8U84RAYDXZ
-
----
-
-## 8. Conseils importants
-
-1. **Transparence** : Mentionnez que vous utilisez des liens affiliés (obligation légale)
-2. **Qualité** : Ne recommandez que des produits de qualité
-3. **Diversifier** : Ne dépendez pas d'une seule source de revenus
-4. **Analytics** : Trackez vos conversions pour optimiser
+| Fichier | Rôle |
+|---------|------|
+| `src/config/affiliate.js` | Configuration des IDs |
+| `src/screens/ProductDetailScreen.js` | Bouton "Acheter sur [Site]" |
+| `src/screens/StoreScreen.js` | Liste des produits |
 
 ---
 
-*Document créé le 2026-01-01*
+## Obligations légales
+
+> ⚠️ **Important** : Mentionnez que vous utilisez des liens affiliés :
+> - Dans les conditions d'utilisation de l'app
+> - Optionnel : petit texte sur la page produit
+
+---
+
+*Dernière mise à jour : 2026-01-02*

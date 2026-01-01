@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput, Modal, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { Search, ShoppingCart, Zap, Tag, Star, Heart, Trash2, CreditCard, X, Banknote, ArrowRight, List, Filter, ChevronLeft, ChevronRight, Menu } from 'lucide-react-native';
+import { Search, Zap, Tag, Star, Heart, X, ArrowRight, List, Filter, ChevronLeft, ChevronRight, Menu, ExternalLink } from 'lucide-react-native';
 import { API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,7 +31,6 @@ export default function StoreScreen() {
   const [selectedCategory, setSelectedCategory] = useState('Tout');
   const [cartItems, setCartItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCartModal, setShowCartModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [flashSales, setFlashSales] = useState([]);
 
@@ -161,9 +160,7 @@ export default function StoreScreen() {
       <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
       <View style={styles.priceRow}>
         <Text style={styles.price}>{item.price.toFixed(2)} €</Text>
-        <TouchableOpacity style={styles.cartButton} onPress={() => handleAddToCart(item)}>
-          <ShoppingCart color="#FFFFFF" size={16} />
-        </TouchableOpacity>
+        <ExternalLink color="#F97316" size={16} />
       </View>
     </TouchableOpacity>
   );
@@ -272,10 +269,6 @@ export default function StoreScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
             <Text style={styles.headerLogo}>🛍️ Store IA</Text>
-            <TouchableOpacity style={styles.cartContainer} onPress={() => setShowCartModal(true)}>
-                <ShoppingCart color="#FFFFFF" size={24} />
-                {cartCount > 0 && <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{cartCount}</Text></View>}
-            </TouchableOpacity>
         </View>
         <View style={styles.searchContainer}>
             <Search color="#9CA3AF" size={20} />
@@ -329,29 +322,6 @@ export default function StoreScreen() {
           </View>
       </View>
 
-      {/* Cart Modal */}
-      <Modal visible={showCartModal} animationType="slide" transparent={true}>
-        <View style={styles.cartModalOverlay}>
-          <View style={styles.cartModal}>
-            <View style={styles.cartModalHeader}>
-              <Text style={styles.cartModalTitle}>Panier ({cartCount})</Text>
-              <TouchableOpacity onPress={() => setShowCartModal(false)}><X color="#000" /></TouchableOpacity>
-            </View>
-            <ScrollView style={styles.cartItemsList}>
-                {cartItems.map(item => (
-                    <View key={item.id} style={styles.cartItem}>
-                        <Text style={{ flex: 1 }}>{item.name} (x{item.quantity})</Text>
-                        <Text style={{ fontWeight: 'bold' }}>{(item.price * item.quantity).toFixed(2)}€</Text>
-                        <TouchableOpacity onPress={() => removeFromCart(item.id)}><Trash2 size={16} color="red" /></TouchableOpacity>
-                    </View>
-                ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-                <Text style={styles.checkoutButtonText}>Payer {cartTotal.toFixed(2)} €</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
