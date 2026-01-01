@@ -1993,3 +1993,9 @@ GET /api/agent/status
 [2026-01-01T22:10:45.675Z] GET /api/products/meta/categories from 127.0.0.1
 [2026-01-01T22:10:45.677Z] GET /api/products?page=1&limit=20 from 127.0.0.1
 [2026-01-01T22:10:45.678Z] GET /api/products/meta/trending from 127.0.0.1
+[2026-01-01T22:12:02.312Z] GET /api/locations from 192.168.11.114
+[2026-01-01T22:12:20.400Z] GET /api/locations from 192.168.11.114
+[2026-01-01T22:43:26.828Z] GET /api/locations from 127.0.0.1
+[2026-01-01T22:43:28.427Z] GET /api/products?page=1&limit=20 from 127.0.0.1
+[2026-01-01T22:43:28.431Z] GET /api/products/meta/categories from 127.0.0.1
+[2026-01-01T22:43:28.432Z] GET /api/products/meta/trending from 127.0.0.1

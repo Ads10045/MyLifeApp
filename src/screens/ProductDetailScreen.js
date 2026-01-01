@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, use
 import { ArrowLeft, Star, Heart, ShoppingCart, Zap, Share2, Truck, Shield, RotateCcw, CreditCard, Banknote, ExternalLink } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PAYMENT_CONFIG, convertToLocal } from '../config/payment';
+import { getAffiliateLink, isAffiliateable } from '../config/affiliate';
 
 export default function ProductDetailScreen({ product, onBack, onAddToCart }) {
   const { width } = useWindowDimensions();
@@ -231,24 +232,32 @@ export default function ProductDetailScreen({ product, onBack, onAddToCart }) {
             <Text style={styles.supplierText}>par {product.supplier}</Text>
           </View>
 
-          {/* Source Link */}
+          {/* Source Link - Now with Amazon Affiliate Tag! */}
           {product.sourceUrl && (
             <TouchableOpacity 
               style={styles.sourceLink} 
               onPress={() => {
-                console.log('Opening URL:', product.sourceUrl);
-                if (!product.sourceUrl) {
+                // Get affiliate link (adds Amazon tag if applicable)
+                const affiliateUrl = getAffiliateLink(product);
+                const urlToOpen = affiliateUrl || product.sourceUrl;
+                
+                console.log('Opening Affiliate URL:', urlToOpen);
+                
+                if (!urlToOpen) {
                   Alert.alert('Erreur', 'Pas de lien disponible');
                   return;
                 }
-                Linking.openURL(product.sourceUrl).catch(err => {
+                
+                Linking.openURL(urlToOpen).catch(err => {
                   console.error('Failed to open URL:', err);
                   Alert.alert('Erreur', 'Impossible d\'ouvrir le lien: ' + err.message);
                 });
               }}
             >
               <ExternalLink size={14} color="#3B82F6" />
-              <Text style={styles.sourceLinkText}>Voir sur la boutique officielle ({product.supplier})</Text>
+              <Text style={styles.sourceLinkText}>
+                {isAffiliateable(product.sourceUrl) ? '🛒 Acheter sur Amazon' : `Voir sur ${product.supplier}`}
+              </Text>
             </TouchableOpacity>
           )}
 
