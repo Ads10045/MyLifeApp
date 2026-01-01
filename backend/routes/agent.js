@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const sourcingJob = require('../jobs/sourcingJob');
 const fulfillmentJob = require('../jobs/fulfillmentJob');
-const { isAdmin } = require('../middleware/auth');
+const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 // GET /api/agent/status - Retourne les stats des agents
-router.get('/status', isAdmin, (req, res) => {
+router.get('/status', authenticateToken, isAdmin, (req, res) => {
   res.json({
     sourcing: {
       isRunning: sourcingJob.isRunning,
@@ -23,7 +23,7 @@ router.get('/status', isAdmin, (req, res) => {
 });
 
 // POST /api/agent/run - Lance manuellement le sourcing
-router.post('/run', isAdmin, async (req, res) => {
+router.post('/run', authenticateToken, isAdmin, async (req, res) => {
   if (sourcingJob.isRunning) {
     return res.status(409).json({ message: 'L\'agent sourcing travaille déjà !' });
   }
@@ -32,7 +32,7 @@ router.post('/run', isAdmin, async (req, res) => {
 });
 
 // POST /api/agent/fulfill - Lance manuellement le fulfillment
-router.post('/fulfill', isAdmin, async (req, res) => {
+router.post('/fulfill', authenticateToken, isAdmin, async (req, res) => {
   if (fulfillmentJob.isRunning) {
     return res.status(409).json({ message: 'L\'agent fulfillment travaille déjà !' });
   }

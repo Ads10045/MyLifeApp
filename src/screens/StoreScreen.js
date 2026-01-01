@@ -149,18 +149,38 @@ export default function StoreScreen() {
   const ProductCard = ({ item }) => (
     <TouchableOpacity style={styles.productCard} onPress={() => setSelectedProduct(item)}>
       {item.margin > 70 && (
-        <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.flashBadge}>
-          <Zap color="#FFFFFF" size={10} fill="#FFFFFF" />
-          <Text style={styles.flashBadgeText}>FLASH</Text>
-        </LinearGradient>
+        <View style={styles.dealBadge}>
+          <Text style={styles.dealBadgeText}>-{Math.round(item.margin)}%</Text>
+        </View>
       )}
       <View style={styles.imageContainer}>
-        <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="cover" />
+        <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
       </View>
-      <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-      <View style={styles.priceRow}>
-        <Text style={styles.price}>{item.price.toFixed(2)} €</Text>
-        <ExternalLink color="#F97316" size={16} />
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        {/* Rating */}
+        <View style={styles.ratingRow}>
+          {[1,2,3,4,5].map((star) => (
+            <Star 
+              key={star} 
+              size={12} 
+              color="#FF9900" 
+              fill={star <= (item.rating || 4) ? "#FF9900" : "transparent"} 
+            />
+          ))}
+          <Text style={styles.ratingCount}>({Math.floor(Math.random() * 1000) + 50})</Text>
+        </View>
+        {/* Price */}
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceSymbol}>€</Text>
+          <Text style={styles.priceMain}>{Math.floor(item.price)}</Text>
+          <Text style={styles.priceCents}>,{((item.price % 1) * 100).toFixed(0).padStart(2, '0')}</Text>
+        </View>
+        {/* Prime Badge */}
+        <View style={styles.primeBadge}>
+          <Text style={styles.primeText}>Prime</Text>
+          <Text style={styles.deliveryText}>Livraison GRATUITE</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -190,26 +210,10 @@ export default function StoreScreen() {
 
   const renderContentHeader = () => (
       <View>
-        {/* Flash Sales Banner (Only on first page) */}
-        {pagination.page === 1 && flashSales.length > 0 && (
-            <LinearGradient colors={['#DC2626', '#B91C1C']} style={styles.flashSaleBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <View style={styles.flashHeader}>
-                    <View>
-                        <Text style={styles.flashTitle}>🔥 VENTES FLASH</Text>
-                        <Text style={styles.flashSubtitle}>Offres limitées</Text>
-                    </View>
-                    <View style={styles.timerContainer}><Text style={styles.timerText}>05:43:21</Text></View>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {flashSales.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.flashCard} onPress={() => handleAddToCart(item)}>
-                    <Image source={{ uri: item.imageUrl }} style={styles.flashImage} />
-                    <Text style={styles.flashPrice}>{item.price.toFixed(2)}€</Text>
-                    </TouchableOpacity>
-                ))}
-                </ScrollView>
-            </LinearGradient>
-        )}
+        {/* Simple deals banner */}
+        <View style={styles.dealsBanner}>
+          <Text style={styles.dealsBannerText}>⚡ Offres du jour : Économisez jusqu'à 70% sur une sélection de produits</Text>
+        </View>
 
         {/* Controls Bar */}
         <View style={styles.controlsBar}>
@@ -327,15 +331,13 @@ export default function StoreScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF7ED' },
-    header: { backgroundColor: '#F97316', padding: 20, paddingTop: 50, paddingBottom: 16 },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    headerLogo: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
-    cartContainer: { position: 'relative' },
-    cartBadge: { position: 'absolute', top: -8, right: -8, backgroundColor: '#DC2626', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
-    cartBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
-    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 25, paddingHorizontal: 16, paddingVertical: 8 },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#111827' },
+    // Amazon Colors: #131921 (dark), #232F3E (lighter dark), #FF9900 (orange), #FEBD69 (light orange)
+    container: { flex: 1, backgroundColor: '#EAEDED' },
+    header: { backgroundColor: '#131921', padding: 16, paddingTop: 50, paddingBottom: 12 },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    headerLogo: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 2, borderColor: '#FF9900' },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#111827' },
     
     mainLayout: { flex: 1, flexDirection: 'row' },
     
@@ -376,19 +378,40 @@ const styles = StyleSheet.create({
     pageInfoContainer: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#F3F4F6' },
     pageInfoText: { color: '#374151', fontWeight: '600', fontSize: 14 },
 
-    // Existing Product Card Styles
-    gridItem: { marginBottom: 16 },
-    productCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-    imageContainer: { height: 120, backgroundColor: '#F3F4F6', borderRadius: 12, marginBottom: 8, overflow: 'hidden' },
+    // Amazon-Style Product Card
+    gridItem: { marginBottom: 12 },
+    productCard: { backgroundColor: '#FFFFFF', borderRadius: 4, padding: 12, borderWidth: 1, borderColor: '#DDD' },
+    imageContainer: { height: 150, backgroundColor: '#FFFFFF', marginBottom: 10, alignItems: 'center', justifyContent: 'center' },
     productImage: { width: '100%', height: '100%' },
-    productName: { fontSize: 13, fontWeight: '600', color: '#1F2937', marginBottom: 4, height: 36 },
+    productInfo: { paddingTop: 4 },
+    productName: { fontSize: 14, color: '#0F1111', marginBottom: 6, lineHeight: 20 },
+    
+    // Rating
+    ratingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 2 },
+    ratingCount: { fontSize: 12, color: '#007185', marginLeft: 4 },
+    
+    // Price Amazon Style
+    priceContainer: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 },
+    priceSymbol: { fontSize: 12, color: '#0F1111', marginTop: 2 },
+    priceMain: { fontSize: 24, fontWeight: 'bold', color: '#0F1111' },
+    priceCents: { fontSize: 12, color: '#0F1111', marginTop: 2 },
+    
+    // Prime Badge
+    primeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+    primeText: { fontSize: 12, fontWeight: 'bold', color: '#232F3E', backgroundColor: '#F3A847', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3 },
+    deliveryText: { fontSize: 11, color: '#565959' },
+    
+    // Deal Badge
+    dealBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: '#CC0C39', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 2, zIndex: 10 },
+    dealBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
+    
+    // Old styles kept for compatibility
     priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    price: { fontSize: 16, fontWeight: 'bold', color: '#EA580C' },
-    cartButton: { backgroundColor: '#F97316', padding: 8, borderRadius: 8 },
+    price: { fontSize: 16, fontWeight: 'bold', color: '#B12704' },
     flashBadge: { position: 'absolute', top: 8, left: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
     flashBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' },
 
-    // Flash Banner
+    // Flash Banner (old - kept for compatibility)
     flashSaleBanner: { borderRadius: 16, padding: 16, marginBottom: 20 },
     flashHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     flashTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
@@ -398,6 +421,10 @@ const styles = StyleSheet.create({
     flashCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 8, marginRight: 10, width: 100 },
     flashImage: { width: '100%', height: 80, borderRadius: 8, marginBottom: 6 },
     flashPrice: { fontSize: 14, fontWeight: 'bold', color: '#DC2626' },
+    
+    // Simple Deals Banner (Amazon style)
+    dealsBanner: { backgroundColor: '#232F3E', paddingVertical: 10, paddingHorizontal: 16, marginBottom: 10 },
+    dealsBannerText: { color: '#FFFFFF', fontSize: 13, textAlign: 'center' },
 
     // Cart Modal (Simplified for brevity)
     cartModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

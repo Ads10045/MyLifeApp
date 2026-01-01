@@ -114,8 +114,13 @@ export default function ManagerHub() {
           <TouchableOpacity 
               onPress={() => triggerAgent(type)}
               disabled={data?.isRunning || loading}
+              style={styles.executeButton}
           >
             <LinearGradient
+              colors={[color1, color2]}
+              style={styles.executeButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
                 {loading ? <ActivityIndicator color="#FFF" size="small" /> : (
                     <Play color="#FFF" size={18} fill="#FFF" />
@@ -240,6 +245,8 @@ const styles = StyleSheet.create({
   iconButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   buttonContainer: { alignItems: 'center' },
   buttonLabel: { fontSize: 9, color: '#6B7280', marginTop: 4 },
+  executeButton: { borderRadius: 22, overflow: 'hidden' },
+  executeButtonGradient: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   
   // Products section
   productsSection: { marginTop: 12, padding: 10, backgroundColor: '#F0FDF4', borderRadius: 8 },
