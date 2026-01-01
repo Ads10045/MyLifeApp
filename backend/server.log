@@ -448,3 +448,6 @@
 [2026-01-01T02:24:03.181Z] POST /api/auth/register from 192.168.11.100
 [2026-01-01T02:25:08.809Z] POST /api/auth/login from 192.168.11.114
 [2026-01-01T02:29:53.099Z] POST /api/auth/login from 192.168.11.114
+[2026-01-01T10:11:25.870Z] GET /api/admin/users from 127.0.0.1
+[2026-01-01T10:17:11.639Z] GET /api/health from 127.0.0.1
+[2026-01-01T10:17:48.659Z] GET /api/admin/users from 127.0.0.1
