@@ -1,17 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, TextInput, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bot, Play, Truck, Database, Activity, Terminal, Package } from 'lucide-react-native';
+import { Bot, Play, Truck, Database, Activity, Terminal, Package, Wallet, Settings, Calendar as CalendarIcon } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function ManagerHub() {
   const { user, token } = useAuth();
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({ sourcing: false, fulfillment: false });
   const [refreshing, setRefreshing] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [products, setProducts] = useState([]);
+  
+  const [showConfig, setShowConfig] = useState(false);
+  const [config, setConfig] = useState({ start: '', end: '' });
+  const [savingConfig, setSavingConfig] = useState(false);
+  
+  // Date Picker State
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  const handleDateChange = (event, selectedDate, field) => {
+    // Android: dismiss picker on selection
+    if (Platform.OS === 'android') {
+        if (field === 'start') setShowStartPicker(false);
+        if (field === 'end') setShowEndPicker(false);
+    }
+
+    if (selectedDate) {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        setConfig(prev => ({ ...prev, [field]: dateStr }));
+    }
+  };
 
   useEffect(() => {
     fetchStatus();
@@ -31,15 +53,86 @@ export default function ManagerHub() {
       if (data?.sourcing?.lastProducts) {
         setProducts(data.sourcing.lastProducts);
       }
+      
+      // Update local config state from server if not already editing
+      if (!showConfig && data?.fulfillment?.config?.cleanupRange) {
+         setConfig({
+             start: data.fulfillment.config.cleanupRange.start?.split('T')[0] || '',
+             end: data.fulfillment.config.cleanupRange.end?.split('T')[0] || ''
+         });
+      }
     } catch (error) {
       console.error('Error fetching status:', error);
     }
   };
 
+  const saveConfig = async () => {
+      console.log('🔍 saveConfig appelé - config:', config);
+      
+      const showMessage = (title, message) => {
+          if (Platform.OS === 'web') {
+              window.alert(`${title}: ${message}`);
+          } else {
+              Alert.alert(title, message);
+          }
+      };
+      
+      if (!config.start || !config.end) {
+          console.log('❌ Validation échouée - dates manquantes');
+          showMessage('Erreur', 'Veuillez sélectionner une date de début et de fin.');
+          return;
+      }
+
+      console.log('✅ Validation OK - envoi au backend...');
+      
+      try {
+          setSavingConfig(true);
+          const body = {
+              fulfillment: {
+                  cleanupRange: {
+                      start: new Date(config.start).toISOString(),
+                      end: new Date(config.end).toISOString()
+                  }
+              }
+          };
+          
+          console.log('📤 Body à envoyer:', JSON.stringify(body, null, 2));
+          
+          const response = await fetch(`${API_ENDPOINTS.BASE_URL}/agent/config`, {
+            method: 'POST',
+            headers: { 
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          });
+          
+          console.log('📥 Réponse reçue - status:', response.status);
+          
+          if (response.ok) {
+              const data = await response.json();
+              console.log('✅ Succès - data:', data);
+              showMessage('Succès', 'Configuration mise à jour !');
+              setShowConfig(false);
+              fetchStatus();
+          } else {
+              const errorText = await response.text();
+              console.log('❌ Erreur HTTP - status:', response.status, 'body:', errorText);
+              showMessage('Erreur', 'Impossible de sauvegarder.');
+          }
+      } catch (error) {
+          console.error('❌ Exception:', error);
+          showMessage('Erreur', 'Date invalide ou erreur réseau.');
+      } finally {
+          setSavingConfig(false);
+      }
+  };
+
   const triggerAgent = async (type) => {
     try {
-      setLoading(true);
-      setProducts([]); // Clear previous products
+      setLoadingStates(prev => ({ ...prev, [type]: true }));
+      if (type === 'sourcing') setProducts([]); // Clear previous products only for sourcing
+      
       const endpoint = type === 'sourcing' ? '/agent/run' : '/agent/fulfill';
       const actionName = type === 'sourcing' ? 'Sourcing' : 'Fulfillment';
       
@@ -55,7 +148,7 @@ export default function ManagerHub() {
       
       // Poll for completion and fetch products
       setTimeout(async () => {
-        setLoading(false);
+        setLoadingStates(prev => ({ ...prev, [type]: false }));
         fetchStatus();
         
         // Fetch status will now update products automatically from lastProducts
@@ -63,7 +156,7 @@ export default function ManagerHub() {
 
     } catch (error) {
       console.error('Error:', error);
-      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, [type]: false }));
     }
   };
 
@@ -79,8 +172,16 @@ export default function ManagerHub() {
         <Icon color="#FFFFFF" size={18} />
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: data?.isRunning ? '#10B981' : 'rgba(255,255,255,0.2)' }]}>
-          <Text style={styles.statusText}>{data?.isRunning ? 'RUNNING' : 'IDLE'}</Text>
+        
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+            {type === 'fulfillment' && (
+                <TouchableOpacity onPress={() => setShowConfig(true)}>
+                    <Settings color="#FFFFFF" size={16} />
+                </TouchableOpacity>
+            )}
+            <View style={[styles.statusBadge, { backgroundColor: data?.isRunning ? '#10B981' : 'rgba(255,255,255,0.2)' }]}>
+            <Text style={styles.statusText}>{data?.isRunning ? 'RUNNING' : 'IDLE'}</Text>
+            </View>
         </View>
       </LinearGradient>
       
@@ -96,9 +197,23 @@ export default function ManagerHub() {
                <Text style={styles.statLabel}>Dernière Cat.</Text>
             </View>
           </View>
-        ) : (
+        ) : type === 'fulfillment' ? (
           <View style={styles.statsRow}>
-            <Text style={styles.infoText}>Automatise le paiement fournisseurs et l'expédition.</Text>
+            <Text style={styles.infoText}>
+              Automatise le paiement fournisseurs, l'expédition et 
+              <Text style={{fontWeight: 'bold', color: '#EF4444'}}> supprime les produits expirés.</Text>
+            </Text>
+          </View>
+        ) : (
+             <View style={styles.statsRow}>
+            <View style={styles.stat}>
+               <Text style={styles.statVal}>1,240.50€</Text>
+               <Text style={styles.statLabel}>Solde Dispo.</Text>
+            </View>
+            <View style={styles.stat}>
+               <Text style={styles.statVal}>345.00€</Text>
+               <Text style={styles.statLabel}>En Attente</Text>
+            </View>
           </View>
         )}
 
@@ -112,8 +227,8 @@ export default function ManagerHub() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
-              onPress={() => triggerAgent(type)}
-              disabled={data?.isRunning || loading}
+              onPress={() => type === 'finance' ? Alert.alert('Bientôt', 'La configuration des virements arrive bientôt.') : triggerAgent(type)}
+              disabled={data?.isRunning || (type !== 'finance' && loadingStates[type])}
               style={styles.executeButton}
           >
             <LinearGradient
@@ -122,12 +237,14 @@ export default function ManagerHub() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-                {loading ? <ActivityIndicator color="#FFF" size="small" /> : (
-                    <Play color="#FFF" size={18} fill="#FFF" />
+                {type !== 'finance' && loadingStates[type] ? (
+                    <ActivityIndicator color="#FFF" size="small" /> 
+                ) : (
+                    type === 'finance' ? <Wallet color="#FFF" size={18} /> : <Play color="#FFF" size={18} fill="#FFF" />
                 )}
             </LinearGradient>
           </TouchableOpacity>
-          <Text style={styles.buttonLabel}>Exécuter</Text>
+          <Text style={styles.buttonLabel}>{type === 'finance' ? 'Gérer' : 'Exécuter'}</Text>
         </View>
 
         {/* Products Display */}
@@ -182,6 +299,16 @@ export default function ManagerHub() {
             color2="#F97316"
         />
 
+        {/* Finance / Earnings Section */}
+        <AgentCard 
+            title="Revenus & Règlements" 
+            type="finance" 
+            data={{ isRunning: false, logs: ['Dernier virement: 12/12/2025'] }} 
+            icon={Wallet}
+            color1="#059669" // Emerald 600
+            color2="#10B981" // Emerald 500
+        />
+
         <View style={styles.infoBox}>
             <Activity color="#6B7280" size={16} />
             <Text style={styles.infoBoxText}>
@@ -214,6 +341,114 @@ export default function ManagerHub() {
             </ScrollView>
         </View>
       </Modal>
+
+      {/* Config Modal */}
+      <Modal visible={showConfig} animationType="fade" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={styles.configModal}>
+                <Text style={styles.configTitle}>Configuration Fulfillment</Text>
+                <Text style={styles.configSubtitle}>Intervalle de suppression des produits expirés</Text>
+                
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Date Début</Text>
+                    {Platform.OS === 'web' ? (
+                        <input
+                            type="date"
+                            value={config.start}
+                            onChange={(e) => setConfig({...config, start: e.target.value})}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: '#D1D5DB',
+                                borderRadius: 8,
+                                padding: 12,
+                                fontSize: 14,
+                                width: '100%',
+                                fontFamily: 'system-ui',
+                                backgroundColor: '#FFF',
+                                color: '#111827'
+                            }}
+                        />
+                    ) : (
+                        <>
+                            <TouchableOpacity style={styles.dateInput} onPress={() => setShowStartPicker(true)}>
+                                <CalendarIcon color="#6B7280" size={16} />
+                                <Text style={styles.dateText}>{config.start || 'Sélectionner une date'}</Text>
+                            </TouchableOpacity>
+                            {showStartPicker && (
+                                <View>
+                                    <DateTimePicker
+                                        value={config.start ? new Date(config.start) : new Date(2024, 0, 1)}
+                                        mode="date"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(e, d) => handleDateChange(e, d, 'start')}
+                                    />
+                                    {Platform.OS === 'ios' && (
+                                        <TouchableOpacity onPress={() => setShowStartPicker(false)} style={styles.confirmDateBtn}>
+                                            <Text style={styles.confirmDateText}>Valider la date</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
+                        </>
+                    )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Date Fin</Text>
+                    {Platform.OS === 'web' ? (
+                        <input
+                            type="date"
+                            value={config.end}
+                            onChange={(e) => setConfig({...config, end: e.target.value})}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: '#D1D5DB',
+                                borderRadius: 8,
+                                padding: 12,
+                                fontSize: 14,
+                                width: '100%',
+                                fontFamily: 'system-ui',
+                                backgroundColor: '#FFF',
+                                color: '#111827'
+                            }}
+                        />
+                    ) : (
+                        <>
+                            <TouchableOpacity style={styles.dateInput} onPress={() => setShowEndPicker(true)}>
+                                <CalendarIcon color="#6B7280" size={16} />
+                                <Text style={styles.dateText}>{config.end || 'Sélectionner une date'}</Text>
+                            </TouchableOpacity>
+                            {showEndPicker && (
+                                <View>
+                                    <DateTimePicker
+                                        value={config.end ? new Date(config.end) : new Date()}
+                                        mode="date"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(e, d) => handleDateChange(e, d, 'end')}
+                                    />
+                                    {Platform.OS === 'ios' && (
+                                        <TouchableOpacity onPress={() => setShowEndPicker(false)} style={styles.confirmDateBtn}>
+                                            <Text style={styles.confirmDateText}>Valider la date</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
+                        </>
+                    )}
+                </View>
+
+                <View style={styles.modalActions}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowConfig(false)}>
+                        <Text style={styles.cancelText}>Annuler</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.saveBtn} onPress={saveConfig} disabled={savingConfig}>
+                        {savingConfig ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveText}>Sauvegarder</Text>}
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -266,4 +501,21 @@ const styles = StyleSheet.create({
   logsContainer: { padding: 16 },
   logSection: { color: '#10B981', fontWeight: 'bold', marginBottom: 8, fontSize: 12 },
   logLine: { color: '#D1D5DB', fontSize: 11, fontFamily: 'Menlo', marginBottom: 3 },
+
+  // Config Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  configModal: { backgroundColor: '#FFF', borderRadius: 12, padding: 20, width: '100%' },
+  configTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 5 },
+  configSubtitle: { fontSize: 12, color: '#6B7280', marginBottom: 20 },
+  inputGroup: { marginBottom: 15 },
+  label: { fontSize: 12, fontWeight: 'bold', color: '#374151', marginBottom: 5 },
+  dateInput: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12 },
+  dateText: { color: '#111827', fontSize: 14 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 },
+  cancelBtn: { padding: 10 },
+  cancelText: { color: '#6B7280' },
+  saveBtn: { backgroundColor: '#EA580C', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  saveText: { color: '#FFF', fontWeight: 'bold' },
+  confirmDateBtn: { alignItems: 'center', padding: 8, backgroundColor: '#EFF6FF', marginTop: 5, borderRadius: 6 },
+  confirmDateText: { color: '#2563EB', fontSize: 12, fontWeight: 'bold' }
 });

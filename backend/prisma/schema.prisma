@@ -37,21 +37,23 @@ model Order {
 }
 
 model Product {
-  id            String   @id
+  id            String    @id
   name          String
   description   String
   price         Float
   supplierPrice Float
   margin        Float
   imageUrl      String
-  images        String[] // Multiple product images
-  sourceUrl     String?  // Original product URL (Amazon, AliExpress, eBay, Temu)
+  images        String[]  // Multiple product images
+  sourceUrl     String?   // Original product URL (Amazon, AliExpress, eBay, Temu)
   category      String
-  supplierId    String   @unique
+  supplierId    String    @unique
   supplier      String
-  stock         Int      @default(100)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  stock         Int       @default(100)
+  isActive      Boolean   @default(true)
+  isPromo       Boolean   @default(false)
+  promoExpiry   DateTime? // Date d'expiration de la promo
+  createdAt     DateTime  @default(now())
   updatedAt     DateTime
 }
 

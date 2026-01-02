@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sourcingJob = require('../jobs/sourcingJob');
 const fulfillmentJob = require('../jobs/fulfillmentJob');
+const configManager = require('../utils/configManager');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 // GET /api/agent/status - Retourne les stats des agents
@@ -17,9 +18,30 @@ router.get('/status', authenticateToken, isAdmin, (req, res) => {
     fulfillment: {
       isRunning: fulfillmentJob.isRunning,
       lastRun: fulfillmentJob.lastRun,
-      logs: fulfillmentJob.logs
+      logs: fulfillmentJob.logs,
+      lastDeletedProducts: fulfillmentJob.lastDeletedProducts || [],
+      config: configManager.getFulfillmentConfig()
     }
   });
+});
+
+// GET /api/agent/config - Get Agent Config
+router.get('/config', authenticateToken, isAdmin, (req, res) => {
+  res.json(configManager.config);
+});
+
+// POST /api/agent/config - Update Agent Config
+router.post('/config', authenticateToken, isAdmin, (req, res) => {
+  console.log('📝 POST /config - Body reçu:', JSON.stringify(req.body, null, 2));
+  const { fulfillment } = req.body;
+  if (fulfillment) {
+    console.log('✅ Mise à jour de la config fulfillment:', fulfillment);
+    configManager.updateFulfillmentConfig(fulfillment);
+    console.log('💾 Config sauvegardée:', configManager.config);
+  } else {
+    console.log('⚠️ Pas de données fulfillment dans le body');
+  }
+  res.json({ message: 'Configuration mise à jour', config: configManager.config });
 });
 
 // POST /api/agent/run - Lance manuellement le sourcing

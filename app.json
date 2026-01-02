@@ -32,7 +32,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-build-properties"
+      "expo-build-properties",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
