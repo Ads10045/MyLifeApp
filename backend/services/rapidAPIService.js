@@ -4,6 +4,7 @@ const axios = require('axios');
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST_AMAZON = 'real-time-amazon-data.p.rapidapi.com';
 const RAPIDAPI_HOST_ALIEXPRESS = 'aliexpress-datahub.p.rapidapi.com';
+const RAPIDAPI_HOST_EBAY = 'ebay-data-api.p.rapidapi.com';
 
 class RapidAPIService {
   
@@ -23,7 +24,6 @@ class RapidAPIService {
         params: {
           query: searchQuery,
           page: '1',
-          country: 'FR',
           category_id: 'aps',
           sort_by: 'RELEVANCE' // Can also use PRICE_LOW_TO_HIGH but RELEVANCE with 'deals' keyword is usually better for actual promos
         },
@@ -124,20 +124,72 @@ class RapidAPIService {
       return [];
     }
   }
+ 
+  // Search eBay products
+  async searchEbay(query, limit = 5) {
+    if (!RAPIDAPI_KEY) {
+      console.log('⚠️ Pas de clé RapidAPI configurée');
+      return [];
+    }
+
+    console.log(`🔍 Recherche eBay via RapidAPI: "${query}"`);
+    
+    try {
+      const response = await axios.get('https://ebay-data-api.p.rapidapi.com/search', {
+        params: {
+          query: query,
+          page: '1',
+          perPage: limit.toString()
+        },
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST_EBAY
+        },
+        timeout: 15000
+      });
+
+      const products = response.data?.items || response.data?.data?.items || [];
+      console.log(`✅ ${products.length} produits eBay trouvés`);
+
+      return products.slice(0, limit).map((p, i) => {
+        const priceValue = parseFloat(p.price?.value || p.price || 15);
+        const supplierPrice = parseFloat(priceValue.toFixed(2));
+        const sellingPrice = parseFloat((supplierPrice * 1.3).toFixed(2)); // 30% margin
+        
+        return {
+          name: p.title?.substring(0, 80) || 'Produit eBay',
+          description: p.title || 'Produit eBay tendance',
+          price: sellingPrice,
+          supplierPrice: supplierPrice,
+          imageUrl: p.image || p.imageUrl || 'https://via.placeholder.com/400',
+          images: p.images || [p.image || p.imageUrl || 'https://via.placeholder.com/400'],
+          supplier: 'eBay',
+          supplierId: `EBAY-${p.id || p.itemId || Date.now()}-${i}`,
+          rating: 4.2, // Default rating if not provided
+          link: p.itemUrl || p.url
+        };
+      });
+
+    } catch (error) {
+      console.error('❌ Erreur eBay RapidAPI:', error.message);
+      return [];
+    }
+  }
 
   // Combined search
   async searchAll(query, limit = 5) {
     console.log(`🌐 Recherche multi-plateforme RapidAPI: "${query}"`);
     
-    const [amazonProducts, aliexpressProducts] = await Promise.all([
+    const [amazonProducts, aliexpressProducts, ebayProducts] = await Promise.all([
       this.searchAmazon(query, limit),
-      this.searchAliExpress(query, limit)
+      this.searchAliExpress(query, limit),
+      this.searchEbay(query, limit)
     ]);
 
-    const allProducts = [...amazonProducts, ...aliexpressProducts];
+    const allProducts = [...amazonProducts, ...aliexpressProducts, ...ebayProducts];
     
     // Shuffle and return
-    return allProducts.sort(() => Math.random() - 0.5).slice(0, limit * 2);
+    return allProducts.sort(() => Math.random() - 0.5).slice(0, limit * 3);
   }
 }
 

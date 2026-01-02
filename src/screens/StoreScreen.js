@@ -1,10 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput, Modal, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { Search, Zap, Tag, Star, Heart, X, ArrowRight, List, Filter, ChevronLeft, ChevronRight, Menu, ExternalLink } from 'lucide-react-native';
+import { Search, Zap, Tag, Star, Heart, X, ArrowRight, List, Filter, ChevronLeft, ChevronRight, Menu, ExternalLink, ShoppingBag } from 'lucide-react-native';
 import { API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import ProductDetailScreen from './ProductDetailScreen';
+
+const SupplierBadge = ({ supplier }) => {
+  const getSupplierInfo = (name) => {
+    switch (name?.toLowerCase()) {
+      case 'amazon':
+        return { color: '#FF9900', label: 'AMZ', textColor: '#000', icon: 'amazon' };
+      case 'ebay':
+        return { color: '#0064D2', label: 'EBAY', textColor: '#FFF', icon: 'ebay' };
+      case 'aliexpress':
+        return { color: '#FF4747', label: 'ALI', textColor: '#FFF', icon: 'aliexpress' };
+      default:
+        return { color: '#10B981', label: 'IA', textColor: '#FFF', icon: 'ia' };
+    }
+  };
+
+  const info = getSupplierInfo(supplier);
+
+  return (
+    <View style={[styles.supplierBadge, { backgroundColor: info.color, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+      <ShoppingBag size={10} color={info.textColor} />
+      <Text style={[styles.supplierBadgeText, { color: info.textColor }]}>{info.label}</Text>
+    </View>
+  );
+};
 
 export default function StoreScreen() {
   const { user } = useAuth();
@@ -29,6 +53,8 @@ export default function StoreScreen() {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState(['Tout']);
   const [selectedCategory, setSelectedCategory] = useState('Tout');
+  const [suppliers, setSuppliers] = useState(['Tous']);
+  const [selectedSupplier, setSelectedSupplier] = useState('Tous');
   const [cartItems, setCartItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -36,13 +62,14 @@ export default function StoreScreen() {
 
   useEffect(() => {
     fetchCategories();
+    fetchSuppliers();
     fetchTrending();
   }, []);
 
   // Fetch when filters change
   useEffect(() => {
     fetchProducts(1, pagination.limit, true);
-  }, [selectedCategory, searchQuery, pagination.limit]);
+  }, [selectedCategory, selectedSupplier, searchQuery, pagination.limit]);
 
   const fetchProducts = async (page, limit, reset = false) => {
     try {
@@ -51,6 +78,9 @@ export default function StoreScreen() {
       
       if (selectedCategory !== 'Tout') {
         url += `&category=${encodeURIComponent(selectedCategory)}`;
+      }
+      if (selectedSupplier !== 'Tous' && selectedSupplier !== 'Tout') {
+        url += `&supplier=${encodeURIComponent(selectedSupplier)}`;
       }
       if (searchQuery) {
         url += `&search=${encodeURIComponent(searchQuery)}`;
@@ -92,6 +122,16 @@ export default function StoreScreen() {
       setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.API_URL}/products/meta/suppliers`);
+      const data = await response.json();
+      setSuppliers(data);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
     }
   };
 
@@ -154,6 +194,7 @@ export default function StoreScreen() {
         </View>
       )}
       <View style={styles.imageContainer}>
+        <SupplierBadge supplier={item.supplier} />
         <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
       </View>
       <View style={styles.productInfo}>
@@ -213,6 +254,22 @@ export default function StoreScreen() {
         {/* Simple deals banner */}
         <View style={styles.dealsBanner}>
           <Text style={styles.dealsBannerText}>⚡ Offres du jour : Économisez jusqu'à 70% sur une sélection de produits</Text>
+        </View>
+
+        {/* Suppliers Filter */}
+        <View style={styles.suppliersFilterCard}>
+            <Text style={styles.filterLabel}>Filtrer par site :</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suppliersScroll}>
+                {suppliers.map(sup => (
+                    <TouchableOpacity 
+                        key={sup} 
+                        style={[styles.supplierFilterBtn, selectedSupplier === sup && styles.supplierFilterBtnActive]}
+                        onPress={() => setSelectedSupplier(sup)}
+                    >
+                        <Text style={[styles.supplierFilterText, selectedSupplier === sup && styles.supplierFilterTextActive]}>{sup}</Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
         </View>
 
         {/* Controls Bar */}
@@ -405,6 +462,9 @@ const styles = StyleSheet.create({
     dealBadge: { position: 'absolute', top: 8, left: 8, backgroundColor: '#CC0C39', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 2, zIndex: 10 },
     dealBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: 'bold' },
     
+    supplierBadge: { position: 'absolute', top: 8, right: 8, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, zIndex: 11, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 2, elevation: 3 },
+    supplierBadgeText: { fontSize: 9, fontWeight: 'bold', textTransform: 'uppercase' },
+    
     // Old styles kept for compatibility
     priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     price: { fontSize: 16, fontWeight: 'bold', color: '#B12704' },
@@ -435,4 +495,13 @@ const styles = StyleSheet.create({
     cartItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#EEE' },
     checkoutButton: { backgroundColor: '#F97316', padding: 15, borderRadius: 10, alignItems: 'center' },
     checkoutButtonText: { color: '#FFF', fontWeight: 'bold' },
+
+    // Suppliers Filter
+    suppliersFilterCard: { backgroundColor: '#FFF', paddingVertical: 12, marginBottom: 10, borderRadius: 4, borderBottomWidth: 1, borderBottomColor: '#DDD' },
+    filterLabel: { fontSize: 13, fontWeight: 'bold', color: '#0F1111', marginLeft: 16, marginBottom: 8 },
+    suppliersScroll: { paddingHorizontal: 16 },
+    supplierFilterBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#D1D5DB', marginRight: 10 },
+    supplierFilterBtnActive: { backgroundColor: '#232F3E', borderColor: '#232F3E' },
+    supplierFilterText: { fontSize: 13, color: '#4B5563', fontWeight: '600' },
+    supplierFilterTextActive: { color: '#FFF' },
 });

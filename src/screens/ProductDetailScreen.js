@@ -4,6 +4,30 @@ import { ArrowLeft, Star, Heart, Share2, Truck, Shield, RotateCcw, ExternalLink,
 import { LinearGradient } from 'expo-linear-gradient';
 import { getAffiliateLink, isAffiliateable } from '../config/affiliate';
 
+const SupplierBadge = ({ supplier }) => {
+  const getSupplierInfo = (name) => {
+    switch (name?.toLowerCase()) {
+      case 'amazon':
+        return { color: '#FF9900', label: 'AMZ', textColor: '#000', icon: 'amazon' };
+      case 'ebay':
+        return { color: '#0064D2', label: 'EBAY', textColor: '#FFF', icon: 'ebay' };
+      case 'aliexpress':
+        return { color: '#FF4747', label: 'ALI', textColor: '#FFF', icon: 'aliexpress' };
+      default:
+        return { color: '#10B981', label: 'IA', textColor: '#FFF', icon: 'ia' };
+    }
+  };
+
+  const info = getSupplierInfo(supplier);
+
+  return (
+    <View style={[styles.supplierBadge, { backgroundColor: info.color, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+      <ShoppingBag size={12} color={info.textColor} />
+      <Text style={[styles.supplierBadgeText, { color: info.textColor }]}>{info.label}</Text>
+    </View>
+  );
+};
+
 export default function ProductDetailScreen({ product, onBack }) {
   const { width } = useWindowDimensions();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -76,6 +100,7 @@ export default function ProductDetailScreen({ product, onBack }) {
             style={[styles.mainImage, !isLargeScreen && { width }]} 
             resizeMode={isLargeScreen ? "contain" : "cover"} 
           />
+          <SupplierBadge supplier={product.supplier} />
           
           {/* Thumbnails */}
           <View style={styles.thumbnails}>
@@ -234,4 +259,7 @@ const styles = StyleSheet.create({
   // Affiliate Notice
   affiliateNotice: { backgroundColor: '#FEF3C7', padding: 12, borderRadius: 12, marginTop: 16 },
   affiliateNoticeText: { fontSize: 12, color: '#92400E', lineHeight: 18, textAlign: 'center' },
+  
+  supplierBadge: { position: 'absolute', top: 16, right: 16, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, zIndex: 11, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, elevation: 4 },
+  supplierBadgeText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
 });

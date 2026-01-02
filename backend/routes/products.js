@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // GET all products (public) with Pagination
 router.get('/', async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 20 } = req.query;
+    const { category, supplier, search, page = 1, limit = 20 } = req.query;
     
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -16,8 +16,12 @@ router.get('/', async (req, res) => {
 
     const where = { isActive: true };
     
-    if (category && category !== 'Tous') {
+    if (category && category !== 'Tous' && category !== 'Tout') {
       where.category = category;
+    }
+
+    if (supplier && supplier !== 'Tous' && supplier !== 'Tout') {
+      where.supplier = { contains: supplier, mode: 'insensitive' };
     }
     
     if (search) {
@@ -57,7 +61,21 @@ router.get('/meta/categories', async (req, res) => {
       distinct: ['category']
     });
     
-    res.json(['Tous', ...categories.map(c => c.category)]);
+    res.json(['Tout', ...categories.map(c => c.category).filter(Boolean)]);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET suppliers
+router.get('/meta/suppliers', async (req, res) => {
+  try {
+    const suppliers = await prisma.product.findMany({
+      select: { supplier: true },
+      distinct: ['supplier']
+    });
+    
+    res.json(['Tous', ...suppliers.map(s => s.supplier).filter(Boolean)]);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
