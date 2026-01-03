@@ -29,35 +29,40 @@ async function seedBanners() {
       { name: 'Celebration Multi', path: `${GITHUB_BASE_URL}/banners/celebration-banners-multilingual.html` },
       { name: 'iCommerce Special', path: `${GITHUB_BASE_URL}/banners/icommerce-2.html` },
       { name: 'Korean Style Deals', path: `${GITHUB_BASE_URL}/banners/korean-celebration-banners.html` },
-      { name: 'Nouveautés Tech', path: null },
-      { name: 'Mode Été 2026', path: null },
-      { name: 'Meilleures Ventes Amazon', path: null },
-      { name: 'Exclusivités AliExpress', path: null },
-      { name: 'Trouvailles eBay', path: null },
-      { name: 'Gadgets Cuisine', path: null },
-      { name: 'Équipement Sport', path: null },
-      { name: 'Beauté & Soins', path: null },
-      { name: 'Déco Maison Slim', path: null },
-      { name: 'Promotions Flash', path: null },
-      { name: 'Sélection Premium', path: null },
-      { name: 'Cadeaux Homme', path: null },
-      { name: 'Cadeaux Femme', path: null },
-      { name: 'Smart Home Deals', path: null }
+      { name: 'Nouveautés Tech' },
+      { name: 'Mode Été 2026' },
+      { name: 'Meilleures Ventes Amazon' },
+      { name: 'Exclusivités AliExpress' },
+      { name: 'Trouvailles eBay' },
+      { name: 'Gadgets Cuisine' },
+      { name: 'Équipement Sport' },
+      { name: 'Beauté & Soins' },
+      { name: 'Déco Maison Slim' },
+      { name: 'Promotions Flash' },
+      { name: 'Sélection Premium' },
+      { name: 'Cadeaux Homme' },
+      { name: 'Cadeaux Femme' },
+      { name: 'Smart Home Deals' }
     ];
+
+    const availablePaths = bannerConfigs.slice(0, 6).map(c => c.path);
 
     for (let i = 0; i < bannerConfigs.length; i++) {
         const config = bannerConfigs[i];
+        // Cycle through available paths if not explicitly provided
+        const bannerPath = config.path || availablePaths[i % availablePaths.length];
+        
         const shuffled = [...products].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, 6);
         
         const positions = ['top', 'sidebar', 'footer', 'middle'];
         const position = i < 6 ? 'top' : positions[Math.floor(Math.random() * positions.length)];
 
-        await prisma.banner.create({
+        const banner = await prisma.banner.create({
             data: {
                 name: config.name,
-                path: config.path,
-                position: position,
+                position: positions[i % positions.length],
+                path: bannerPath,
                 active: true,
                 product1Id: selected[0]?.id,
                 product2Id: selected[1]?.id,
@@ -67,7 +72,7 @@ async function seedBanners() {
                 product6Id: selected[5]?.id,
             }
         });
-        console.log(`✅ Created Banner: ${config.name} (Path: ${config.path})`);
+        console.log(`✅ Created Banner: ${config.name} (Path: ${bannerPath})`);
     }
 
     console.log('🎉 Successfully re-seeded 20 banners with paths.');

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriPlus Dynamic Banners (Advanced jQuery)</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; padding: 40px; }
+        .banner-container { margin-bottom: 50px; border: 1px solid #1e293b; border-radius: 20px; padding: 20px; background: #1e293b; }
+        .status { color: #94a3b8; font-size: 0.9rem; margin-bottom: 10px; }
+        .banner-frame { 
+            width: 100%; 
+            height: 350px; 
+            border: none; 
+            border-radius: 15px; 
+            background: white;
+            overflow: hidden;
+        }
+        h1 { color: #f8fafc; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+    <h1>✨ Dynamic Product Injection Test</h1>
+    <div id="display-area">Chargement du système dynamique...</div>
+
+<script>
+$(document).ready(function() {
+    const API_BASE = "http://localhost:3000/api";
+
+    // 1. Initialiser le chargement
+    fetchBanners();
+
+    async function fetchBanners() {
+        try {
+            const banners = await $.getJSON(`${API_BASE}/banners`);
+            $('#display-area').empty();
+
+            for (const banner of banners) {
+                if (banner.path) {
+                    renderBanner(banner);
+                }
+            }
+        } catch (e) {
+            $('#display-area').html("<p style='color:red'>Erreur: " + e.statusText + "</p>");
+        }
+    }
+
+    async function renderBanner(banner) {
+        const $wrapper = $('<div class="banner-container"></div>').appendTo('#display-area');
+        $wrapper.append(`<div class="status">Chargement de "${banner.name}"...</div>`);
+
+        try {
+            // A. Récupérer les ID des produits (1 à 6)
+            const productIds = [
+                banner.product1Id, banner.product2Id, banner.product3Id, 
+                banner.product4Id, banner.product5Id, banner.product6Id
+            ].filter(id => id);
+
+            // B. Récupérer les données produits réelles
+            let products = [];
+            if (productIds.length > 0) {
+                const res = await $.getJSON(`${API_BASE}/products?ids=${productIds.join(',')}`);
+                products = res.products;
+            }
+
+            // C. Récupérer le code HTML de la bannière (Template)
+            let htmlCode = await $.get(banner.path);
+
+            // D. DISTRIBUER LES IMAGES ET LES DONNÉES
+            // On remplace les placeholders style [PRODUCT_IMAGE_1], [PRODUCT_NAME_1], etc.
+            products.forEach((prod, index) => {
+                const idx = index + 1;
+                const imgUrl = prod.imageUrl || "https://via.placeholder.com/300";
+                
+                // Regex pour remplacer globalement les tags
+                htmlCode = htmlCode.replace(new RegExp(`\\[PRODUCT_IMAGE_${idx}\\]`, 'g'), imgUrl);
+                htmlCode = htmlCode.replace(new RegExp(`\\[PRODUCT_NAME_${idx}\\]`, 'g'), prod.name);
+                htmlCode = htmlCode.replace(new RegExp(`\\[PRODUCT_PRICE_${idx}\\]`, 'g'), prod.price + "€");
+            });
+
+            // E. Affichage final dans une iframe (Blob URL pour le contenu dynamique)
+            const blob = new Blob([htmlCode], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            $wrapper.find('.status').html(`✅ <b>${banner.name}</b> (Injectée avec ${products.length} produits)`);
+            $wrapper.append(`<iframe class="banner-frame" src="${blobUrl}"></iframe>`);
+
+        } catch (e) {
+            $wrapper.find('.status').html(`❌ Erreur sur ${banner.name}: ` + e.statusText);
+        }
+    }
+});
+</script>
+
+</body>
+</html>

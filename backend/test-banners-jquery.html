@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Bannières NutriPlus (jQuery)</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .banner-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; overflow: hidden; }
+        .banner-info { padding: 15px; border-bottom: 1px solid #eee; background: #fff; }
+        .banner-name { font-weight: bold; font-size: 1.2rem; color: #333; }
+        .banner-path { font-size: 0.8rem; color: #666; margin-top: 5px; word-break: break-all; }
+        iframe { width: 100%; border: none; height: 350px; display: block; }
+        .loading { text-align: center; padding: 50px; font-size: 1.2rem; color: #888; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 NutriPlus Banners Viewer</h1>
+    <p>Ce test utilise l'API Backend pour charger les designs via les URLs GitHub.</p>
+    
+    <div id="banner-list" class="loading">Sourcing des bannières...</div>
+</div>
+
+<script>
+$(document).ready(function() {
+    const API_URL = "http://localhost:3000/api/banners";
+
+    $.ajax({
+        url: API_URL,
+        method: "GET",
+        dataType: "json",
+        success: function(banners) {
+            $('#banner-list').empty().removeClass('loading');
+
+            if (banners.length === 0) {
+                $('#banner-list').html('<p>Aucune bannière active trouvée.</p>');
+                return;
+            }
+
+            banners.forEach(function(banner) {
+                if (banner.path) {
+                    const bannerHtml = `
+                        <div class="banner-card">
+                            <div class="banner-info">
+                                <div class="banner-name">${banner.name} (${banner.position})</div>
+                                <div class="banner-path">${banner.path}</div>
+                            </div>
+                            <iframe src="${banner.path}" title="${banner.name}"></iframe>
+                        </div>
+                    `;
+                    $('#banner-list').append(bannerHtml);
+                }
+            });
+        },
+        error: function(xhr, status, error) {
+            $('#banner-list').html('<div style="color:red">Erreur lors de la récupération : ' + error + '</div>');
+            console.error("Détails de l'erreur:", xhr.responseText);
+        }
+    });
+});
+</script>
+
+</body>
+</html>
