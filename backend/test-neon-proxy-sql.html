@@ -98,6 +98,11 @@ $(document).ready(function() {
             finalHtml = finalHtml.replace(new RegExp('\\[BANNER_NAME\\]', 'g'), banner.name || "");
             finalHtml = finalHtml.replace(new RegExp('\\[BANNER_POSITION\\]', 'g'), banner.position || "");
             
+            // Support de la variable simplifiée [imageUrl] (prend le 1er produit par défaut)
+            if (products.length > 0) {
+                finalHtml = finalHtml.replace(new RegExp('\\[imageUrl\\]', 'g'), products[0].imageUrl || "");
+            }
+            
             products.forEach((p, index) => {
                 const i = index + 1;
                 const img = p.imageUrl || "";
