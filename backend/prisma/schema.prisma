@@ -101,6 +101,7 @@ model Banner {
   id         String   @id @default(uuid())
   name       String
   position   String?  // top, sidebar, footer, etc.
+  path       String?  // Path to the banner HTML or image asset
   active     Boolean  @default(true)
   
   product1Id String?

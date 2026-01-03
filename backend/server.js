@@ -53,9 +53,14 @@ const swaggerDocument = {
   }
 };
 
+const path = require('path');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static banners
+app.use('/banners', express.static(path.join(__dirname, '../banners')));
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

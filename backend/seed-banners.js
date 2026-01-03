@@ -2,13 +2,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function seedBanners() {
-  console.log('🌱 Expanding Banners to 20 rows...');
+  console.log('🌱 Expanding Banners with local assets...');
   
   try {
-    // 1. Fetch available active products
     const products = await prisma.product.findMany({
       where: { isActive: true },
-      take: 100, // Get a good pool
+      take: 100,
       orderBy: { createdAt: 'desc' }
     });
 
@@ -17,32 +16,44 @@ async function seedBanners() {
       return;
     }
 
-    // Clear existing banners to avoid duplicates if preferred, 
-    // or just add more. I will just add 20 fresh ones.
-    // await prisma.banner.deleteMany({}); 
+    // Delete existing banners to refresh with paths
+    await prisma.banner.deleteMany({}); 
 
-    const bannerNames = [
-      'Nouveautés Tech', 'Mode Été 2026', 'Meilleures Ventes Amazon', 
-      'Exclusivités AliExpress', 'Trouvailles eBay', 'Gadgets Cuisine',
-      'Équipement Sport', 'Beauté & Soins', 'Déco Maison Slim',
-      'Promotions Flash', 'Sélection Premium', 'Cadeaux Homme',
-      'Cadeaux Femme', 'Bons Plans Tech', 'Smart Home Deals',
-      'Tendance Sneakers', 'Accessoires Gamer', 'Hifi Box Selection',
-      'Outdoor Gear', 'Health & Vitality'
+    const bannerConfigs = [
+      { name: 'Promo Masque Pêche', path: '/banners/peach-mask-promo.html' },
+      { name: 'Bashasaray Collection', path: '/banners/bashasaray-banners.html' },
+      { name: 'CAN Morocco 2025', path: '/banners/can-morocco-2025.html' },
+      { name: 'Celebration Multi', path: '/banners/celebration-banners-multilingual.html' },
+      { name: 'iCommerce Special', path: '/banners/icommerce-2.html' },
+      { name: 'Korean Style Deals', path: '/banners/korean-celebration-banners.html' },
+      { name: 'Nouveautés Tech', path: null },
+      { name: 'Mode Été 2026', path: null },
+      { name: 'Meilleures Ventes Amazon', path: null },
+      { name: 'Exclusivités AliExpress', path: null },
+      { name: 'Trouvailles eBay', path: null },
+      { name: 'Gadgets Cuisine', path: null },
+      { name: 'Équipement Sport', path: null },
+      { name: 'Beauté & Soins', path: null },
+      { name: 'Déco Maison Slim', path: null },
+      { name: 'Promotions Flash', path: null },
+      { name: 'Sélection Premium', path: null },
+      { name: 'Cadeaux Homme', path: null },
+      { name: 'Cadeaux Femme', path: null },
+      { name: 'Smart Home Deals', path: null }
     ];
 
-    for (let i = 0; i < 20; i++) {
-        // Shuffle products for each banner to get variety
+    for (let i = 0; i < bannerConfigs.length; i++) {
+        const config = bannerConfigs[i];
         const shuffled = [...products].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, 6);
         
-        const name = bannerNames[i] || `Banner Promo ${i + 1}`;
         const positions = ['top', 'sidebar', 'footer', 'middle'];
-        const position = positions[Math.floor(Math.random() * positions.length)];
+        const position = i < 6 ? 'top' : positions[Math.floor(Math.random() * positions.length)];
 
         await prisma.banner.create({
             data: {
-                name: name,
+                name: config.name,
+                path: config.path,
                 position: position,
                 active: true,
                 product1Id: selected[0]?.id,
@@ -53,10 +64,10 @@ async function seedBanners() {
                 product6Id: selected[5]?.id,
             }
         });
-        console.log(`✅ Created Banner: ${name}`);
+        console.log(`✅ Created Banner: ${config.name} (Path: ${config.path})`);
     }
 
-    console.log('🎉 Successfully created 20 banners.');
+    console.log('🎉 Successfully re-seeded 20 banners with paths.');
 
   } catch (error) {
     console.error('❌ Error seeding banners:', error);
