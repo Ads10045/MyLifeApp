@@ -144,4 +144,63 @@ router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
+const axios = require('axios');
+
+/**
+ * @swagger
+ * /api/banners/render/{id}:
+ *   get:
+ *     summary: Render banner HTML with dynamic product data (Secure SSR)
+ *     tags: [Banners]
+ */
+router.get('/render/:id', async (req, res) => {
+  try {
+    const banner = await prisma.banner.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!banner) return res.status(404).send('Bannière non trouvée');
+
+    // 1. Fetch associated products
+    const productIds = [
+      banner.product1Id, banner.product2Id, banner.product3Id,
+      banner.product4Id, banner.product5Id, banner.product6Id
+    ].filter(id => id);
+
+    let products = [];
+    if (productIds.length > 0) {
+      products = await prisma.product.findMany({
+        where: { id: { in: productIds } }
+      });
+    }
+
+    // 2. Fetch HTML Template from GitHub
+    const response = await axios.get(banner.path);
+    let html = response.data;
+
+    // 3. Dynamic Injection (Server-Side)
+    html = html.replace(/\[BANNER_NAME\]/g, banner.name || "");
+    html = html.replace(/\[BANNER_POSITION\]/g, banner.position || "");
+    
+    // Support [imageUrl] (1st product)
+    if (products.length > 0) {
+      html = html.replace(/\[imageUrl\]/g, products[0].imageUrl || "");
+    }
+
+    // Support numbered products [PRODUCT_IMAGE_1], etc.
+    products.forEach((p, index) => {
+      const i = index + 1;
+      html = html.replace(new RegExp(`\\[PRODUCT_IMAGE_${i}\\]`, 'g'), p.imageUrl || "");
+      html = html.replace(new RegExp(`\\[PRODUCT_NAME_${i}\\]`, 'g'), p.name || "");
+      html = html.replace(new RegExp(`\\[PRODUCT_PRICE_${i}\\]`, 'g'), p.price ? p.price + "€" : "");
+    });
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('Error rendering banner:', error);
+    res.status(500).send('Erreur lors du rendu de la bannière');
+  }
+});
+
 module.exports = router;
