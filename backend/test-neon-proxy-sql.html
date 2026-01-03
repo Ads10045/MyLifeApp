@@ -1,148 +1,148 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NutriPlus Neon SQL Proxy Injection</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #020617; color: #f8fafc; padding: 40px; }
-        .box { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
-        .log { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #34d399; border: 1px solid #1e293b; max-height: 250px; overflow-y: auto; }
-        .preview-pane { background: #fff; border-radius: 15px; height: 350px; width: 100%; border: none; margin-top: 20px; }
-        h1 { margin-bottom: 20px; background: linear-gradient(90deg, #38bdf8, #a855f7); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-        .label { color: #38bdf8; font-weight: bold; font-size: 0.8rem; margin-bottom: 10px; text-transform: uppercase; }
-        .error { color: #f87171; }
-    </style>
-</head>
-<body>
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NutriPlus Neon SQL Proxy Injection</title>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <style>
+            body { font-family: 'Inter', sans-serif; background: #020617; color: #f8fafc; padding: 40px; }
+            .box { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
+            .log { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; color: #34d399; border: 1px solid #1e293b; max-height: 250px; overflow-y: auto; }
+            .preview-pane { background: #fff; border-radius: 15px; height: 350px; width: 100%; border: none; margin-top: 20px; }
+            h1 { margin-bottom: 20px; background: linear-gradient(90deg, #38bdf8, #a855f7); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .label { color: #38bdf8; font-weight: bold; font-size: 0.8rem; margin-bottom: 10px; text-transform: uppercase; }
+            .error { color: #f87171; }
+        </style>
+    </head>
+    <body>
 
-    <h1>🚀 Neon SQL Proxy Distribution</h1>
+        <h1>🚀 Neon SQL Proxy Distribution</h1>
 
-    <div class="box">
-        <div class="label">Status & Transmissions</div>
-        <div id="logs" class="log">Initialisation du moteur SQL Proxy...</div>
-    </div>
-
-    <div id="result" style="display:none;">
         <div class="box">
-            <div class="label">Rendu Dynamique (Neon SQL -> Proxy -> Template)</div>
-            <iframe id="final-preview" class="preview-pane"></iframe>
+            <div class="label">Status & Transmissions</div>
+            <div id="logs" class="log">Initialisation du moteur SQL Proxy...</div>
         </div>
-    </div>
 
-<script>
-$(document).ready(function() {
-    // Configuration fournie par l'utilisateur
-    const config = {
-        db: "postgresql://neondb_owner:npg_5AzdsSYIxJ9C@ep-falling-shape-abbss0l8-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require",
-        sql: "https://ep-falling-shape-abbss0l8.eu-west-2.aws.neon.tech/sql",
-        proxy: "https://corsproxy.io/?",
-        tags: { 'com': 'nutriplusapp2-21', 'es': 'nutriplusap07-21', 'de': 'nutriplusap0f-21', 'it': 'nutriplusap0e-21', 'uk': 'nutriplusa0c7-21' }
-    };
+        <div id="result" style="display:none;">
+            <div class="box">
+                <div class="label">Rendu Dynamique (Neon SQL -> Proxy -> Template)</div>
+                <iframe id="final-preview" class="preview-pane"></iframe>
+            </div>
+        </div>
 
-    const TARGET_BANNER_ID = "4edcc562-0211-45eb-9dd8-ab0a6f8b3925"; // ID de démo
+    <script>
+    $(document).ready(function() {
+        // Configuration fournie par l'utilisateur
+        const config = {
+            db: "postgresql://neondb_owner:npg_5AzdsSYIxJ9C@ep-falling-shape-abbss0l8-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require",
+            sql: "https://ep-falling-shape-abbss0l8.eu-west-2.aws.neon.tech/sql",
+            proxy: "https://corsproxy.io/?",
+            tags: { 'com': 'nutriplusapp2-21', 'es': 'nutriplusap07-21', 'de': 'nutriplusap0f-21', 'it': 'nutriplusap0e-21', 'uk': 'nutriplusa0c7-21' }
+        };
 
-    async function executeSQL(query) {
-        // Neon SQL API attend du JSON : {"query": "..."}
-        const payload = JSON.stringify({ query: query });
-        const url = config.proxy + encodeURIComponent(config.sql);
-        
-        return await $.ajax({
-            url: url,
-            method: "POST",
-            headers: { 
-                "Neon-Connection-String": config.db
-            },
-            data: payload,
-            contentType: "application/json",
-            dataType: "json"
-        });
-    }
+        const TARGET_BANNER_ID = "4edcc562-0211-45eb-9dd8-ab0a6f8b3925"; // ID de démo
 
-    async function startDistribution() {
-        const $logs = $('#logs');
-        try {
-            // 1. Récupérer la bannière
-            $logs.append("<br/>📡 Requete SQL: Sélection de la bannière...");
-            const bannerData = await executeSQL(`SELECT * FROM "Banner" LIMIT 1;`); // On prend la première pour le test
-            const banner = bannerData.rows[0];
-
-            if (!banner) throw new Error("Aucune bannière trouvée.");
-            $logs.append(`<br/>✅ Bannière: <b>${banner.name}</b> (Path: ${banner.path})`);
-
-            // 2. Extraire les IDs de produits
-            const productIds = [
-                banner.product1Id, banner.product2Id, banner.product3Id, 
-                banner.product4Id, banner.product5Id, banner.product6Id
-            ].filter(id => id);
-
-            let products = [];
-            if (productIds.length > 0) {
-                $logs.append(`<br/>📦 SQL: Récupération des produits associés...`);
-                // Formatage de la liste pour SQL: ('id1', 'id2', ...)
-                const idsList = productIds.map(id => `'${id}'`).join(',');
-                const productsData = await executeSQL(`SELECT * FROM "Product" WHERE id IN (${idsList});`);
-                products = productsData.rows;
-            }
-
-            // 3. Charger le template via Proxy
-            $logs.append(`<br/>🌐 Proxy: Téléchargement du template GitHub...`);
-            const templateHtml = await $.get(config.proxy + encodeURIComponent(banner.path));
-
-            // 4. DISTRIBUTION DYNAMIQUE
-            $logs.append(`<br/>🛠️ Injection: Distribution des images et prix...`);
-            let finalHtml = templateHtml;
+        async function executeSQL(query) {
+            // Neon SQL API attend du JSON : {"query": "..."}
+            const payload = JSON.stringify({ query: query });
+            const url = config.proxy + encodeURIComponent(config.sql);
             
-            // Injection des métadonnées de la bannière
-            finalHtml = finalHtml.replace(new RegExp('\\[BANNER_NAME\\]', 'g'), banner.name || "");
-            finalHtml = finalHtml.replace(new RegExp('\\[BANNER_POSITION\\]', 'g'), banner.position || "");
-            
-            // Support de la variable simplifiée [imageUrl] (prend le 1er produit par défaut)
-            if (products.length > 0) {
-                finalHtml = finalHtml.replace(new RegExp('\\[imageUrl\\]', 'g'), products[0].imageUrl || "");
-            }
-            
-            products.forEach((p, index) => {
-                const i = index + 1;
-                const img = p.imageUrl || "";
-                const name = p.name || "";
-                const price = p.price ? p.price + "€" : "";
-                
-                // Remplacement des placeholders
-                finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_IMAGE_${i}\\]`, 'g'), img);
-                finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_NAME_${i}\\]`, 'g'), name);
-                finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_PRICE_${i}\\]`, 'g'), price);
-                
-                $logs.append(`<br/>&nbsp;&nbsp;&nbsp; - Produit ${i} injecté: ${name}`);
+            return await $.ajax({
+                url: url,
+                method: "POST",
+                headers: { 
+                    "Neon-Connection-String": config.db
+                },
+                data: payload,
+                contentType: "application/json",
+                dataType: "json"
             });
-
-            // 5. Affichage final
-            const blob = new Blob([finalHtml], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            $('#final-preview').attr('src', url);
-            
-            $logs.append(`<br/>✨ <span style="color:#34d399">Distribution terminée avec succès !</span>`);
-            $('#result').fadeIn();
-
-        } catch (err) {
-            let errorMsg = err.statusText || err.message;
-            if (err.responseJSON && err.responseJSON.message) {
-                errorMsg = err.responseJSON.message;
-            }
-            $logs.append(`<br/><span class="error">❌ Erreur: ${errorMsg}</span>`);
-            
-            if (err.status === 400) {
-                $logs.append(`<br/><span style="color:#fbbf24">💡 Note: Si l'erreur est 400, il est probable que le proxy (corsproxy.io) bloque l'en-tête "Neon-Connection-String". 
-                Essayez d'utiliser un proxy plus permissif ou vérifiez votre chaine de connexion.</span>`);
-            }
-            console.error(err);
         }
-    }
 
-    startDistribution();
-});
-</script>
+        async function startDistribution() {
+            const $logs = $('#logs');
+            try {
+                // 1. Récupérer la bannière
+                $logs.append("<br/>📡 Requete SQL: Sélection de la bannière...");
+                const bannerData = await executeSQL(`SELECT * FROM "Banner" LIMIT 1;`); // On prend la première pour le test
+                const banner = bannerData.rows[0];
 
-</body>
-</html>
+                if (!banner) throw new Error("Aucune bannière trouvée.");
+                $logs.append(`<br/>✅ Bannière: <b>${banner.name}</b> (Path: ${banner.path})`);
+
+                // 2. Extraire les IDs de produits
+                const productIds = [
+                    banner.product1Id, banner.product2Id, banner.product3Id, 
+                    banner.product4Id, banner.product5Id, banner.product6Id
+                ].filter(id => id);
+
+                let products = [];
+                if (productIds.length > 0) {
+                    $logs.append(`<br/>📦 SQL: Récupération des produits associés...`);
+                    // Formatage de la liste pour SQL: ('id1', 'id2', ...)
+                    const idsList = productIds.map(id => `'${id}'`).join(',');
+                    const productsData = await executeSQL(`SELECT * FROM "Product" WHERE id IN (${idsList});`);
+                    products = productsData.rows;
+                }
+
+                // 3. Charger le template via Proxy
+                $logs.append(`<br/>🌐 Proxy: Téléchargement du template GitHub...`);
+                const templateHtml = await $.get(config.proxy + encodeURIComponent(banner.path));
+
+                // 4. DISTRIBUTION DYNAMIQUE
+                $logs.append(`<br/>🛠️ Injection: Distribution des images et prix...`);
+                let finalHtml = templateHtml;
+                
+                // Injection des métadonnées de la bannière
+                finalHtml = finalHtml.replace(new RegExp('\\[BANNER_NAME\\]', 'g'), banner.name || "");
+                finalHtml = finalHtml.replace(new RegExp('\\[BANNER_POSITION\\]', 'g'), banner.position || "");
+                
+                // Support de la variable simplifiée [imageUrl.jpg] (prend le 1er produit par défaut)
+                if (products.length > 0) {
+                    finalHtml = finalHtml.replace(new RegExp('\\[imageUrl\\.jpg\\]', 'g'), products[0].imageUrl || "");
+                }
+                
+                products.forEach((p, index) => {
+                    const i = index + 1;
+                    const img = p.imageUrl || "";
+                    const name = p.name || "";
+                    const price = p.price ? p.price + "€" : "";
+                    
+                    // Remplacement des placeholders
+                    finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_IMAGE_${i}\\]`, 'g'), img);
+                    finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_NAME_${i}\\]`, 'g'), name);
+                    finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_PRICE_${i}\\]`, 'g'), price);
+                    
+                    $logs.append(`<br/>&nbsp;&nbsp;&nbsp; - Produit ${i} injecté: ${name}`);
+                });
+
+                // 5. Affichage final
+                const blob = new Blob([finalHtml], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                $('#final-preview').attr('src', url);
+                
+                $logs.append(`<br/>✨ <span style="color:#34d399">Distribution terminée avec succès !</span>`);
+                $('#result').fadeIn();
+
+            } catch (err) {
+                let errorMsg = err.statusText || err.message;
+                if (err.responseJSON && err.responseJSON.message) {
+                    errorMsg = err.responseJSON.message;
+                }
+                $logs.append(`<br/><span class="error">❌ Erreur: ${errorMsg}</span>`);
+                
+                if (err.status === 400) {
+                    $logs.append(`<br/><span style="color:#fbbf24">💡 Note: Si l'erreur est 400, il est probable que le proxy (corsproxy.io) bloque l'en-tête "Neon-Connection-String". 
+                    Essayez d'utiliser un proxy plus permissif ou vérifiez votre chaine de connexion.</span>`);
+                }
+                console.error(err);
+            }
+        }
+
+        startDistribution();
+    });
+    </script>
+
+    </body>
+    </html>
