@@ -59,17 +59,20 @@ export default function StoreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [flashSales, setFlashSales] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [selectedBanner, setSelectedBanner] = useState(null);
 
   useEffect(() => {
     fetchCategories();
     fetchSuppliers();
     fetchTrending();
+    fetchBanners();
   }, []);
 
   // Fetch when filters change
   useEffect(() => {
     fetchProducts(1, pagination.limit, true);
-  }, [selectedCategory, selectedSupplier, searchQuery, pagination.limit]);
+  }, [selectedCategory, selectedSupplier, searchQuery, pagination.limit, selectedBanner]);
 
   const fetchProducts = async (page, limit, reset = false) => {
     try {
@@ -84,6 +87,14 @@ export default function StoreScreen() {
       }
       if (searchQuery) {
         url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
+      if (selectedBanner) {
+        const ids = [
+          selectedBanner.product1Id, selectedBanner.product2Id, 
+          selectedBanner.product3Id, selectedBanner.product4Id, 
+          selectedBanner.product5Id, selectedBanner.product6Id
+        ].filter(Boolean).join(',');
+        url += `&ids=${ids}`;
       }
 
       const response = await fetch(url);
@@ -150,6 +161,16 @@ export default function StoreScreen() {
       console.error('Error fetching trending:', error);
     }
   };
+  
+  const fetchBanners = async () => {
+    try {
+      const response = await fetch(API_ENDPOINTS.BANNERS);
+      const data = await response.json();
+      setBanners(data);
+    } catch (error) {
+      console.error('Error fetching banners:', error);
+    }
+  };
 
   // Cart Logic (Same as before)
   const handleAddToCart = (product) => {
@@ -188,6 +209,52 @@ export default function StoreScreen() {
     Alert.alert('Succès', 'Commande simulée avec succès !');
     setCartItems([]);
     setShowCartModal(false);
+  };
+
+  const BannerCarousel = () => {
+    if (!banners || banners.length === 0) return null;
+
+    const topBanners = banners.filter(b => b.position === 'top');
+    if (topBanners.length === 0) return null;
+
+    return (
+      <View style={styles.carouselContainer}>
+        <ScrollView 
+          horizontal 
+          pagingEnabled 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.carouselScroll}
+        >
+          {topBanners.map((banner, index) => (
+            <LinearGradient
+              key={banner.id}
+              colors={['#232F3E', '#131921']}
+              style={[styles.bannerCard, { width: width - 32 }]}
+            >
+              <View style={styles.bannerInfo}>
+                <Text style={styles.bannerTag}>PROMO</Text>
+                <Text style={styles.bannerTitle}>{banner.name}</Text>
+                <TouchableOpacity 
+                  style={styles.bannerBtn}
+                  onPress={() => setSelectedBanner(banner)}
+                >
+                  <Text style={styles.bannerBtnText}>Découvrir</Text>
+                  <ArrowRight size={16} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.bannerVisual}>
+                <Zap color="#FF9900" size={40} fill="#FF9900" />
+              </View>
+            </LinearGradient>
+          ))}
+        </ScrollView>
+        <View style={styles.carouselDots}>
+          {topBanners.map((_, i) => (
+            <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+          ))}
+        </View>
+      </View>
+    );
   };
 
   // --- Render Components ---
@@ -261,10 +328,24 @@ export default function StoreScreen() {
 
   const renderContentHeader = () => (
       <View>
-        {/* Simple deals banner */}
-        <View style={styles.dealsBanner}>
-          <Text style={styles.dealsBannerText}>⚡ Offres du jour : Économisez jusqu'à 70% sur une sélection de produits</Text>
-        </View>
+        {selectedBanner ? (
+          <View style={styles.activeBannerHeader}>
+            <TouchableOpacity onPress={() => setSelectedBanner(null)} style={styles.backToStore}>
+              <X size={20} color="#1F2937" />
+              <Text style={styles.backToStoreText}>Retour au Store</Text>
+            </TouchableOpacity>
+            <Text style={styles.activeBannerTitle}>{selectedBanner.name}</Text>
+          </View>
+        ) : (
+          <BannerCarousel />
+        )}
+        
+        {/* Simple deals banner (retains for context or if no banners) */}
+        {!banners?.length && (
+          <View style={styles.dealsBanner}>
+            <Text style={styles.dealsBannerText}>⚡ Offres du jour : Économisez jusqu'à 70% sur une sélection de produits</Text>
+          </View>
+        )}
 
         {/* Suppliers Filter - The 3 Divisions */}
         <View style={styles.suppliersFilterCard}>
@@ -529,4 +610,41 @@ const styles = StyleSheet.create({
     supplierFilterBtnActive: { backgroundColor: '#232F3E', borderColor: '#232F3E' },
     supplierFilterText: { fontSize: 13, color: '#131921', fontWeight: 'bold' },
     supplierFilterTextActive: { color: '#FFF' },
+
+    // Carousel Styles
+    carouselContainer: { marginBottom: 15 },
+    carouselScroll: { paddingHorizontal: 16, gap: 10 },
+    bannerCard: { 
+        height: 180, 
+        borderRadius: 12, 
+        flexDirection: 'row', 
+        padding: 20, 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        overflow: 'hidden'
+    },
+    bannerInfo: { flex: 1, gap: 8 },
+    bannerTag: { color: '#F97316', fontSize: 10, fontWeight: 'bold', backgroundColor: 'rgba(249, 115, 22, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start' },
+    bannerTitle: { color: '#FFFFFF', fontSize: 24, fontWeight: 'bold', lineHeight: 30 },
+    bannerBtn: { 
+        backgroundColor: '#FF9900', 
+        paddingHorizontal: 16, 
+        paddingVertical: 8, 
+        borderRadius: 20, 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        gap: 6,
+        alignSelf: 'flex-start',
+        marginTop: 8
+    },
+    bannerBtnText: { color: '#000', fontSize: 13, fontWeight: 'bold' },
+    bannerVisual: { width: 80, height: 80, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+    carouselDots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10, gap: 6 },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB' },
+    dotActive: { width: 20, backgroundColor: '#FF9900' },
+
+    activeBannerHeader: { backgroundColor: '#FFFFFF', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 10 },
+    backToStore: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+    backToStoreText: { fontSize: 13, fontWeight: 'bold', color: '#1F2937' },
+    activeBannerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', flex: 1 },
 });

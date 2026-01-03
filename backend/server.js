@@ -78,6 +78,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/agent', require('./routes/agent'));
+app.use('/api/banners', require('./routes/banners'));
 
 // Start Cron Jobs
 const sourcingJob = require('./jobs/sourcingJob');

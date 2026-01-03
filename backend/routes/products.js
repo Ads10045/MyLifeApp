@@ -15,6 +15,11 @@ router.get('/', async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const where = { isActive: true };
+
+    if (req.query.ids) {
+      const idsArray = req.query.ids.split(',');
+      where.id = { in: idsArray };
+    }
     
     if (category && category !== 'Tous' && category !== 'Tout') {
       where.category = category;

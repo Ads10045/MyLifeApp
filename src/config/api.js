@@ -40,6 +40,9 @@ export const API_ENDPOINTS = {
   
   // Health
   HEALTH: `${API_URL}/health`,
+
+  // Banners
+  BANNERS: `${API_URL}/banners`,
 };
 
 // Export current environment info
