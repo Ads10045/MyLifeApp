@@ -69,7 +69,9 @@
                 const banner = bannerData.rows[0];
 
                 if (!banner) throw new Error("Aucune bannière trouvée.");
-                $logs.append(`<br/>✅ Bannière: <b>${banner.name}</b> (Path: ${banner.path})`);
+                $logs.append(`<br/>✅ Bannière: <b>${banner.name}</b>`);
+                $logs.append(`<br/>🆔 <span style="color:#94a3b8">Banner ID: ${banner.id}</span>`);
+                $logs.append(`<br/>📂 Path: ${banner.path}`);
 
                 // 2. Extraire les IDs de produits
                 const productIds = [
@@ -114,7 +116,9 @@
                     finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_NAME_${i}\\]`, 'g'), name);
                     finalHtml = finalHtml.replace(new RegExp(`\\[PRODUCT_PRICE_${i}\\]`, 'g'), price);
                     
-                    $logs.append(`<br/>&nbsp;&nbsp;&nbsp; - Produit ${i} injecté: ${name}`);
+                    $logs.append(`<br/>&nbsp;&nbsp;&nbsp; - Produit ${i}: <b>${name}</b>`);
+                    $logs.append(`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🆔 ID: <span style="color:#94a3b8">${p.id}</span>`);
+                    $logs.append(`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🖼️ URL: <span style="color:#38bdf8">${img}</span>`);
                 });
 
                 // 5. Affichage final
