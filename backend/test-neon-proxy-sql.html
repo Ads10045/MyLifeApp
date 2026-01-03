@@ -94,6 +94,10 @@ $(document).ready(function() {
             $logs.append(`<br/>🛠️ Injection: Distribution des images et prix...`);
             let finalHtml = templateHtml;
             
+            // Injection des métadonnées de la bannière
+            finalHtml = finalHtml.replace(new RegExp('\\[BANNER_NAME\\]', 'g'), banner.name || "");
+            finalHtml = finalHtml.replace(new RegExp('\\[BANNER_POSITION\\]', 'g'), banner.position || "");
+            
             products.forEach((p, index) => {
                 const i = index + 1;
                 const img = p.imageUrl || "";
