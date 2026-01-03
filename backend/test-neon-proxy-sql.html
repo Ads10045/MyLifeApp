@@ -98,9 +98,9 @@
                 finalHtml = finalHtml.replace(new RegExp('\\[BANNER_NAME\\]', 'g'), banner.name || "");
                 finalHtml = finalHtml.replace(new RegExp('\\[BANNER_POSITION\\]', 'g'), banner.position || "");
                 
-                // Support de la variable simplifiée [imageUrl.jpg] (prend le 1er produit par défaut)
+                // Support de la variable simplifiée [imageUrl] (prend le 1er produit par défaut)
                 if (products.length > 0) {
-                    finalHtml = finalHtml.replace(new RegExp('\\[imageUrl\\.jpg\\]', 'g'), products[0].imageUrl || "");
+                    finalHtml = finalHtml.replace(new RegExp('\\[imageUrl\\]', 'g'), products[0].imageUrl || "");
                 }
                 
                 products.forEach((p, index) => {
