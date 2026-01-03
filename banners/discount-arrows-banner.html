@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discounts & Offers Banner - Tailwind + SVG</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-200 min-h-screen flex items-center justify-center p-4 md:p-8 font-display">
+
+  <!-- MAIN BANNER -->
+  <div class="relative w-full max-w-4xl bg-white rounded-lg shadow-xl overflow-hidden p-6 md:p-10">
+    
+    <!-- ARROWS SECTION (SVG) -->
+    <div class="flex justify-center md:justify-start items-end gap-0 -ml-4 md:-ml-8 mb-4">
+      
+      <!-- Arrow 1: 30% (Pink/Red Gradient) -->
+      <div class="relative">
+        <svg class="w-24 h-20 md:w-32 md:h-28" viewBox="0 0 150 100">
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#ec4899;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#f43f5e;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon points="0,10 100,10 150,50 100,90 0,90" fill="url(#grad1)" />
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-white font-black text-xl md:text-3xl pr-6">30%</span>
+      </div>
+      
+      <!-- Arrow 2: 40% (Yellow/Amber Gradient) -->
+      <div class="relative -ml-8 md:-ml-12">
+        <svg class="w-28 h-24 md:w-40 md:h-32" viewBox="0 0 170 110">
+          <defs>
+            <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon points="0,10 110,10 170,55 110,100 0,100" fill="url(#grad2)" />
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-white font-black text-2xl md:text-4xl pr-8">40%</span>
+      </div>
+      
+      <!-- Arrow 3: 50% (Green/Teal Gradient) -->
+      <div class="relative -ml-10 md:-ml-16">
+        <svg class="w-32 h-28 md:w-48 md:h-36" viewBox="0 0 200 120">
+          <defs>
+            <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#f97316;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon points="0,10 130,10 200,60 130,110 0,110" fill="url(#grad3)" />
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-white font-black text-3xl md:text-5xl pr-10">50%</span>
+      </div>
+    </div>
+
+    <!-- TEXT SECTION -->
+    <div class="text-center md:text-left">
+      <h1 class="text-4xl md:text-7xl font-black tracking-tight">
+        <span class="bg-gradient-to-r from-pink-500 via-amber-500 to-green-500 bg-clip-text text-transparent">DISCOUNTS</span>
+      </h1>
+      <p class="text-xl md:text-3xl font-bold text-slate-700 mt-1">AND MANY <span class="text-orange-500">OFFERS</span></p>
+      
+      <!-- Description Text -->
+      <p class="text-sm md:text-base text-slate-400 mt-4 max-w-xl mx-auto md:mx-0">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce dignissim pretium consectetur. 
+        Curabitur tempor posuere massa in varius. Pellentesque viverra nibh ex vehicula mattis.
+      </p>
+
+      <!-- CTA Button -->
+      <button class="mt-6 px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+        SHOP NOW
+      </button>
+    </div>
+
+  </div>
+
+</body>
+</html>
