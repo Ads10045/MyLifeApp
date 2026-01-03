@@ -19,13 +19,16 @@ async function seedBanners() {
     // Delete existing banners to refresh with paths
     await prisma.banner.deleteMany({}); 
 
+    // Base URL for GitHub Assets
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/Ads10045/MyLifeApp/main";
+
     const bannerConfigs = [
-      { name: 'Promo Masque Pêche', path: '/banners/peach-mask-promo.html' },
-      { name: 'Bashasaray Collection', path: '/banners/bashasaray-banners.html' },
-      { name: 'CAN Morocco 2025', path: '/banners/can-morocco-2025.html' },
-      { name: 'Celebration Multi', path: '/banners/celebration-banners-multilingual.html' },
-      { name: 'iCommerce Special', path: '/banners/icommerce-2.html' },
-      { name: 'Korean Style Deals', path: '/banners/korean-celebration-banners.html' },
+      { name: 'Promo Masque Pêche', path: `${GITHUB_BASE_URL}/banners/peach-mask-promo.html` },
+      { name: 'Bashasaray Collection', path: `${GITHUB_BASE_URL}/banners/bashasaray-banners.html` },
+      { name: 'CAN Morocco 2025', path: `${GITHUB_BASE_URL}/banners/can-morocco-2025.html` },
+      { name: 'Celebration Multi', path: `${GITHUB_BASE_URL}/banners/celebration-banners-multilingual.html` },
+      { name: 'iCommerce Special', path: `${GITHUB_BASE_URL}/banners/icommerce-2.html` },
+      { name: 'Korean Style Deals', path: `${GITHUB_BASE_URL}/banners/korean-celebration-banners.html` },
       { name: 'Nouveautés Tech', path: null },
       { name: 'Mode Été 2026', path: null },
       { name: 'Meilleures Ventes Amazon', path: null },

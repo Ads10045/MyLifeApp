@@ -19,14 +19,7 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Use GitHub as the asset host for production/deployment
-    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/Ads10045/MyLifeApp/main";
-    const fullBanners = banners.map(b => ({
-      ...b,
-      fullPath: b.path ? `${GITHUB_BASE_URL}${b.path}` : null
-    }));
-
-    res.json(fullBanners);
+    res.json(banners);
   } catch (error) {
     console.error('Error fetching banners:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des bannières' });
@@ -56,14 +49,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bannière non trouvée' });
     }
 
-    // Use GitHub as the asset host for production/deployment
-    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/Ads10045/MyLifeApp/main";
-    const fullBanner = {
-      ...banner,
-      fullPath: banner.path ? `${GITHUB_BASE_URL}${banner.path}` : null
-    };
-
-    res.json(fullBanner);
+    res.json(banner);
   } catch (error) {
     console.error('Error fetching banner:', error);
     res.status(500).json({ error: 'Erreur serveur' });
