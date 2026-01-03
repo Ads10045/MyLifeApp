@@ -19,12 +19,11 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Transform relative paths to full URLs
-    const protocol = req.protocol;
-    const host = req.get('host');
+    // Use GitHub as the asset host for production/deployment
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/Ads10045/MyLifeApp/main";
     const fullBanners = banners.map(b => ({
       ...b,
-      fullPath: b.path ? `${protocol}://${host}${b.path}` : null
+      fullPath: b.path ? `${GITHUB_BASE_URL}${b.path}` : null
     }));
 
     res.json(fullBanners);
@@ -57,12 +56,11 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bannière non trouvée' });
     }
 
-    // Transform relative path to full URL
-    const protocol = req.protocol;
-    const host = req.get('host');
+    // Use GitHub as the asset host for production/deployment
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/Ads10045/MyLifeApp/main";
     const fullBanner = {
       ...banner,
-      fullPath: banner.path ? `${protocol}://${host}${banner.path}` : null
+      fullPath: banner.path ? `${GITHUB_BASE_URL}${banner.path}` : null
     };
 
     res.json(fullBanner);
