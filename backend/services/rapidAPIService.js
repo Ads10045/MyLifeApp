@@ -81,17 +81,18 @@ class RapidAPIService {
       return [];
     }
 
-    console.log(`🔍 Recherche AliExpress via RapidAPI: "${query}"`);
+    const host = 'aliexpress-datahub.p.rapidapi.com';
+    console.log(`🔍 Recherche AliExpress via RapidAPI (${host}): "${query}"...`);
     
     try {
-      const response = await axios.get('https://aliexpress-datahub.p.rapidapi.com/item_search', {
+      const response = await axios.get(`https://${host}/item_search`, {
         params: {
-          q: query,
-          page: '1'
+            q: query,
+            page: '1'
         },
         headers: {
           'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': RAPIDAPI_HOST_ALIEXPRESS
+          'X-RapidAPI-Host': host
         },
         timeout: 15000
       });
@@ -99,28 +100,53 @@ class RapidAPIService {
       const products = response.data?.result?.resultList || [];
       console.log(`✅ ${products.length} produits AliExpress trouvés`);
 
+      if (products.length === 0) {
+          console.log('⚠️ Aucun produit trouvé sur AliExpress (DataHub)');
+          return [];
+      }
+
       return products.slice(0, limit).map((p, i) => {
         const item = p.item || p;
-        const mainImage = item.image || 'https://via.placeholder.com/400';
-        // AliExpress sometimes has multiple images in different fields
-        const allImages = item.images || [mainImage];
+        const name = item.title || item.product_title || 'Produit AliExpress';
+        const itemId = item.itemId || item.item_id || p.productId || p.product_id;
         
+        let mainImage = item.image || item.product_main_image || 'https://via.placeholder.com/400';
+        if (typeof mainImage === 'string' && mainImage.startsWith('//')) {
+            mainImage = 'https:' + mainImage;
+        }
+        
+        const rawImages = item.images || item.product_small_images || [mainImage];
+        const sanitizedImages = Array.isArray(rawImages) ? rawImages.map(img => {
+            if (typeof img === 'string' && img.startsWith('//')) return 'https:' + img;
+            return img;
+        }) : [mainImage];
+        
+        let sPrice = parseFloat(item.sku?.def?.promotionPrice || item.sku?.def?.price || item.app_sale_price || 15);
+        if (isNaN(sPrice)) sPrice = 15.0;
+        
+        const supplierPrice = parseFloat(sPrice.toFixed(2));
+        const sellingPrice = parseFloat((supplierPrice * 1.5).toFixed(2)); // RG: +50%
+
+        let baseUrl = item.itemUrl || item.item_url || item.product_detail_url || `https://www.aliexpress.com/item/${itemId}.html`;
+        if (baseUrl.startsWith('//')) baseUrl = 'https:' + baseUrl;
+
         return {
-          name: item.title?.substring(0, 80) || 'Produit AliExpress',
-          description: item.title || 'Produit tendance AliExpress',
-          price: parseFloat(item.sku?.def?.promotionPrice || item.sku?.def?.price || 15) * 1.3,
-          supplierPrice: parseFloat(item.sku?.def?.promotionPrice || item.sku?.def?.price || 12),
+          name: name.substring(0, 80),
+          description: name,
+          price: sellingPrice,
+          supplierPrice: supplierPrice,
           imageUrl: mainImage,
-          images: allImages,
+          images: sanitizedImages,
           supplier: 'AliExpress',
-          supplierId: `AE-${item.itemId || Date.now()}-${i}`,
-          rating: parseFloat(item.averageStar) || 4.5,
-          orders: item.orders || 0
+          supplierId: `AE-${itemId}`,
+          rating: parseFloat(item.rating || item.evaluate_rate) || 4.5,
+          link: baseUrl,
+          isDeal: true
         };
       });
 
     } catch (error) {
-      console.error('❌ Erreur AliExpress RapidAPI:', error.message);
+      console.error('❌ Erreur AliExpress RapidAPI:', error.response?.data?.message || error.message);
       return [];
     }
   }

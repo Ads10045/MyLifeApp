@@ -14,7 +14,7 @@ export const AFFILIATE_CONFIG = {
 
   // ==================== ALIEXPRESS ====================
   aliexpress: {
-    trackingId: '', // Votre ID Portals AliExpress
+    trackingId: 'nutriplusap', // Votre ID Portals AliExpress
     baseUrl: 'https://www.aliexpress.com/',
     paramName: 'aff_id', // Paramètre URL pour l'affiliation
   },

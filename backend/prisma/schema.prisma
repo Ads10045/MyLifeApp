@@ -96,3 +96,20 @@ enum Role {
   USER
   ADMIN
 }
+
+model Banner {
+  id         String   @id @default(uuid())
+  name       String
+  position   String?  // top, sidebar, footer, etc.
+  active     Boolean  @default(true)
+  
+  product1Id String?
+  product2Id String?
+  product3Id String?
+  product4Id String?
+  product5Id String?
+  product6Id String?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

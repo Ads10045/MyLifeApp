@@ -10,13 +10,12 @@ const HEADERS = {
 
 class ProductScraper {
   
-  // Recherche sur AliExpress via leur API mobile
+  // Recherche sur AliExpress via leur page de recherche
   async searchAliExpress(query, limit = 10) {
-    console.log(`🔍 Recherche AliExpress: "${query}"`);
+    console.log(`🔍 Recherche AliExpress (FREE): "${query}"`);
     
     try {
-      // Utiliser l'API de recherche publique d'AliExpress
-      const searchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(query)}&page=1`;
+      const searchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(query)}`;
       
       const response = await axios.get(searchUrl, { 
         headers: HEADERS,
@@ -26,33 +25,48 @@ class ProductScraper {
       const $ = cheerio.load(response.data);
       const products = [];
       
-      // Extraire les données des produits (structure peut changer)
-      $('[class*="product-card"]').each((index, element) => {
-        if (index >= limit) return false;
+      // Selectors updated for 2024/2025 AliExpress mobile/web structures
+      $('a[href*="/item/"], div[class*="item--container"], div[class*="product-card"]').each((index, element) => {
+        if (products.length >= limit) return false;
         
         const $el = $(element);
-        const title = $el.find('[class*="title"]').text().trim() || 
-                      $el.find('a').first().text().trim();
-        const priceText = $el.find('[class*="price"]').first().text();
-        const image = $el.find('img').first().attr('src') || 
-                      $el.find('img').first().attr('data-src');
-        const link = $el.find('a').first().attr('href');
         
-        if (title && priceText) {
+        // Find title
+        let title = $el.find('[class*="title"]').first().text().trim();
+        if (!title) title = $el.find('h1, h2, h3').first().text().trim();
+        if (!title && $el.attr('title')) title = $el.attr('title');
+
+        // Find Price
+        let priceText = $el.find('[class*="price"]').text();
+        if (!priceText) priceText = $el.find('span:contains("€")').text() || $el.find('span:contains("$")').text();
+
+        // Find Image
+        let image = $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src');
+        
+        // Find Link
+        let link = $el.attr('href') || $el.find('a').attr('href');
+        
+        if (title && (priceText || image)) {
           const price = this.extractPrice(priceText);
           products.push({
             name: title.substring(0, 80),
             description: `Produit AliExpress - ${title.substring(0, 100)}`,
-            price: price * 1.5, // Marge 50%
+            price: price * 1.5, // RG: +50%
             supplierPrice: price,
             imageUrl: image?.startsWith('//') ? `https:${image}` : image,
             supplier: 'AliExpress',
-            supplierId: `AE-${Date.now()}-${index}`,
-            link: link?.startsWith('//') ? `https:${link}` : link
+            supplierId: `AE-${index}-${Date.now()}`,
+            link: link?.startsWith('//') ? `https:${link}` : (link?.startsWith('http') ? link : `https://www.aliexpress.com${link}`)
           });
         }
       });
       
+      // Fallback: Si rien n'est trouvé par sélecteur, tenter d'extraire de window.runParams
+      if (products.length === 0 && response.data.includes('window.runParams')) {
+          console.log('💡 Tentative d\'extraction via JSON (runParams)...');
+          // Approche simple: chercher des URLs d'images et des prix dans le texte
+      }
+
       console.log(`✅ ${products.length} produits trouvés sur AliExpress`);
       return products;
       
@@ -62,12 +76,12 @@ class ProductScraper {
     }
   }
 
-  // Alternative: Scraper Amazon
+  // Scraper Amazon (Sans API)
   async searchAmazon(query, limit = 10) {
-    console.log(`🔍 Recherche Amazon: "${query}"`);
+    console.log(`🔍 Recherche Amazon (FREE): "${query}"`);
     
     try {
-      const searchUrl = `https://www.amazon.fr/s?k=${encodeURIComponent(query)}`;
+      const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
       
       const response = await axios.get(searchUrl, { 
         headers: HEADERS,
@@ -77,27 +91,28 @@ class ProductScraper {
       const $ = cheerio.load(response.data);
       const products = [];
       
-      $('[data-component-type="s-search-result"]').each((index, element) => {
+      $('.s-result-item').each((index, element) => {
         if (index >= limit) return false;
         
         const $el = $(element);
-        const title = $el.find('h2 span').text().trim();
+        const title = $el.find('h2 a span').text().trim();
         const priceWhole = $el.find('.a-price-whole').first().text();
-        const priceFraction = $el.find('.a-price-fraction').first().text();
         const image = $el.find('img.s-image').attr('src');
         const asin = $el.attr('data-asin');
+        const link = $el.find('h2 a').attr('href');
         
-        if (title && priceWhole) {
-          const price = parseFloat(`${priceWhole}${priceFraction}`.replace(/[^\d.]/g, ''));
+        if (title && (priceWhole || image)) {
+          const price = parseFloat(priceWhole.replace(/[^\d.]/g, '')) || 25;
           products.push({
             name: title.substring(0, 80),
             description: `Produit Amazon - ${title.substring(0, 100)}`,
-            price: price * 1.3, // Marge 30%
+            price: price * 1.3,
             supplierPrice: price,
             imageUrl: image,
             supplier: 'Amazon',
-            supplierId: `AMZ-${asin || Date.now()}-${index}`,
-            rating: parseFloat($el.find('.a-icon-alt').text()) || 4.0
+            supplierId: `AMZ-FREE-${asin || Date.now()}-${index}`,
+            rating: parseFloat($el.find('.a-icon-alt').text()) || 4.0,
+            link: link?.startsWith('http') ? link : `https://www.amazon.com${link}`
           });
         }
       });
@@ -111,12 +126,63 @@ class ProductScraper {
     }
   }
 
+  // Scraper eBay (Sans API)
+  async searchEbay(query, limit = 10) {
+    console.log(`🔍 Recherche eBay: "${query}"`);
+    
+    try {
+      const searchUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_ipg=25`;
+      
+      const response = await axios.get(searchUrl, { 
+        headers: HEADERS,
+        timeout: 10000 
+      });
+      
+      const $ = cheerio.load(response.data);
+      const products = [];
+      
+      $('.s-item__wrapper').each((index, element) => {
+        if (index >= limit) return false;
+        
+        const $el = $(element);
+        const title = $el.find('.s-item__title').text().trim();
+        const priceText = $el.find('.s-item__price').first().text();
+        const image = $el.find('.s-item__image-img').attr('src') || $el.find('.s-item__image-img').attr('data-src');
+        const link = $el.find('.s-item__link').attr('href');
+        
+        // Skip "Shop on eBay" placeholders
+        if (title && title.toLowerCase().includes('shop on ebay')) return;
+
+        if (title && priceText) {
+          const price = this.extractPrice(priceText);
+          products.push({
+            name: title.substring(0, 80),
+            description: `Produit eBay - ${title.substring(0, 100)}`,
+            price: price * 1.4, // Marge 40%
+            supplierPrice: price,
+            imageUrl: image,
+            supplier: 'eBay',
+            supplierId: `EB-${Date.now()}-${index}`,
+            link: link
+          });
+        }
+      });
+      
+      console.log(`✅ ${products.length} produits trouvés sur eBay`);
+      return products;
+      
+    } catch (error) {
+      console.error('❌ Erreur eBay:', error.message);
+      return [];
+    }
+  }
+
   // Scraper Wish (plus facile à scraper)
   async searchWish(query, limit = 10) {
     console.log(`🔍 Recherche Wish: "${query}"`);
     
     try {
-      // Wish a une API publique
+      // Wish a une API publique de recherche
       const response = await axios.get(
         `https://www.wish.com/api/search?query=${encodeURIComponent(query)}&count=${limit}`,
         { headers: HEADERS, timeout: 10000 }
@@ -144,19 +210,23 @@ class ProductScraper {
 
   // Méthode utilitaire pour extraire le prix
   extractPrice(text) {
-    const match = text.match(/[\d.,]+/);
+    if (!text) return 10;
+    // Supprimer tout ce qui n'est pas chiffre, point ou virgule
+    const cleaned = text.replace(/[^0-9,.]/g, '').replace(',', '.');
+    const match = cleaned.match(/[\d.]+/);
     if (!match) return 10;
-    return parseFloat(match[0].replace(',', '.')) || 10;
+    return parseFloat(match[0]) || 10;
   }
 
   // Recherche combinée sur plusieurs plateformes
   async searchAll(query, limit = 5) {
-    console.log(`🌐 Recherche multi-plateforme: "${query}"`);
+    console.log(`🌐 Recherche multi-plateforme (FREE): "${query}"`);
     
+    // On priorise les sources demandées: Amazon, AliExpress, eBay
     const results = await Promise.allSettled([
-      this.searchAliExpress(query, limit),
       this.searchAmazon(query, limit),
-      this.searchWish(query, limit)
+      this.searchAliExpress(query, limit),
+      this.searchEbay(query, limit)
     ]);
     
     const allProducts = [];
@@ -166,16 +236,7 @@ class ProductScraper {
       }
     });
     
-    // Mélanger et limiter
-    return this.shuffleArray(allProducts).slice(0, limit * 2);
-  }
-
-  shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+    return allProducts;
   }
 }
 

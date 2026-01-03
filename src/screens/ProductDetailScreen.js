@@ -36,40 +36,47 @@ export default function ProductDetailScreen({ product, onBack }) {
   const isLargeScreen = width > 768;
 
   // Use product.images from API/database, or fallback to single imageUrl
-  const images = (product.images && product.images.length > 0) 
+  const rawImages = (product.images && product.images.length > 0) 
     ? product.images 
     : [product.imageUrl];
 
-  // Open affiliate link
-  const handleBuyOnAmazon = () => {
+  // Sanitize AliExpress images starting with //
+  const images = rawImages.map(img => img?.startsWith('//') ? `https:${img}` : img);
+
+  // Open affiliate link or direct source URL
+  const handleBuyNow = () => {
+    // Generate affiliate link if possible, otherwise use original sourceUrl
     const affiliateUrl = getAffiliateLink(product);
-    const urlToOpen = affiliateUrl || product.sourceUrl;
+    const urlToOpen = affiliateUrl || product.sourceUrl || product.link;
     
-    if (!urlToOpen) {
-      Alert.alert('Erreur', 'Pas de lien disponible pour ce produit');
+    if (!urlToOpen || urlToOpen === '#') {
+      Alert.alert('Indisponible', 'Le lien vers le site d\'origine n\'est pas disponible pour ce produit.');
       return;
     }
     
-    console.log('Opening Affiliate URL:', urlToOpen);
+    console.log('🔗 Redirection vers:', urlToOpen);
     Linking.openURL(urlToOpen).catch(err => {
       console.error('Failed to open URL:', err);
-      Alert.alert('Erreur', 'Impossible d\'ouvrir le lien');
+      Alert.alert('Erreur', 'Impossible d\'ouvrir le lien externe.');
     });
   };
 
   // Render main buy button
-  const renderBuyButton = () => (
-    <TouchableOpacity 
-      style={[styles.buyNowBtn, isLargeScreen && styles.buyNowBtnDesktop]} 
-      onPress={handleBuyOnAmazon}
-    >
-      <ShoppingBag color="#FFFFFF" size={22} />
-      <Text style={styles.buyNowText}>
-        {isAffiliateable(product.sourceUrl) ? 'Acheter sur Amazon' : 'Voir le produit'}
-      </Text>
-      <ExternalLink color="#FFFFFF" size={18} />
-    </TouchableOpacity>
-  );
+  const renderBuyButton = () => {
+    const supplierName = product.supplier || 'le site';
+    const buttonLabel = `Acheter sur ${supplierName}`;
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.buyNowBtn, isLargeScreen && styles.buyNowBtnDesktop]} 
+        onPress={handleBuyNow}
+      >
+        <ShoppingBag color="#FFFFFF" size={22} />
+        <Text style={styles.buyNowText}>{buttonLabel}</Text>
+        <ExternalLink color="#FFFFFF" size={18} />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -202,7 +209,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   
   // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingTop: 50, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   backButton: { padding: 8, backgroundColor: '#F3F4F6', borderRadius: 12 },
   headerTitleText: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   headerActions: { flexDirection: 'row', gap: 12 },

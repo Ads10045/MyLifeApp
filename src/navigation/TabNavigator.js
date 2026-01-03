@@ -8,14 +8,16 @@ import IPTVScreen from '../screens/IPTVScreen';
 import ManagerHub from '../screens/ManagerHub';
 import ProfileScreen from '../screens/ProfileScreen';
 import AdminScreen from '../screens/AdminScreen';
+import AppHeader from '../components/AppHeader';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
   return (
     <Tab.Navigator
+        initialRouteName="Store"
         screenOptions={{
-            headerShown: false,
+            header: () => <AppHeader />,
             tabBarStyle: styles.tabBar,
             tabBarActiveTintColor: '#10B981',
             tabBarInactiveTintColor: '#9CA3AF',
@@ -23,17 +25,17 @@ export default function TabNavigator() {
         }}
     >
         <Tab.Screen 
-            name="GPS" 
-            component={GPSScreen}
-            options={{
-                tabBarIcon: ({ color, size }) => <MapPin color={color} size={24} strokeWidth={2} />,
-            }}
-        />
-        <Tab.Screen 
             name="Store" 
             component={StoreScreen}
             options={{
                 tabBarIcon: ({ color, size }) => <ShoppingBag color={color} size={24} strokeWidth={2} />,
+            }}
+        />
+        <Tab.Screen 
+            name="GPS" 
+            component={GPSScreen}
+            options={{
+                tabBarIcon: ({ color, size }) => <MapPin color={color} size={24} strokeWidth={2} />,
             }}
         />
         <Tab.Screen 

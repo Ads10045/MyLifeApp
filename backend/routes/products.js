@@ -53,6 +53,43 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Helper to get affiliate URL
+function getAffiliateLink(p) {
+  if (!p.sourceUrl) return '#';
+  let url = p.sourceUrl;
+  const supplier = p.supplier?.toLowerCase();
+
+  // Amazon logic (simplified to match backend usage)
+  if (supplier === 'amazon') {
+    const amazonTags = {
+      com: 'nutriplusapp2-21',
+      es: 'nutriplusap07-21',
+      de: 'nutriplusap0f-21',
+      uk: 'nutriplusa0c7-21',
+      it: 'nutriplusap0e-21',
+      fr: 'nutriplusap07-21'
+    };
+    let tag = amazonTags.com;
+    if (url.includes('.es')) tag = amazonTags.es;
+    else if (url.includes('.de')) tag = amazonTags.de;
+    else if (url.includes('.co.uk')) tag = amazonTags.uk;
+    else if (url.includes('.it')) tag = amazonTags.it;
+    else if (url.includes('.fr')) tag = amazonTags.fr;
+    
+    url += (url.includes('?') ? '&' : '?') + 'tag=' + tag;
+  }
+  
+  // AliExpress logic
+  if (supplier === 'aliexpress') {
+    const trackingId = 'nutriplusap';
+    if (!url.includes('trackingId')) {
+        url += (url.includes('?') ? '&' : '?') + 'trackingId=' + trackingId;
+    }
+  }
+
+  return url;
+}
+
 // GET categories - MUST be before /:id
 router.get('/meta/categories', async (req, res) => {
   try {
@@ -93,6 +130,116 @@ router.get('/meta/trending', async (req, res) => {
     res.json(products);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// GET HTML Embed for Blogger (first 20 products)
+router.get('/embed', async (req, res) => {
+  try {
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      take: 20,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    let html = `
+    <style>
+      .nutriplus-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: 10px;
+      }
+      .nutriplus-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #eaeaea;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+      }
+      .nutriplus-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+      }
+      .nutriplus-img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+      .nutriplus-info {
+        padding: 16px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .nutriplus-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 8px 0;
+        height: 44px;
+        overflow: hidden;
+        line-height: 1.4;
+      }
+      .nutriplus-price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #00814C;
+        margin: 0 0 16px 0;
+      }
+      .nutriplus-btn {
+        display: block;
+        text-align: center;
+        background: #00814C;
+        color: white !important;
+        padding: 10px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      .nutriplus-btn:hover {
+        background: #00663d;
+      }
+    </style>
+    <div class="nutriplus-grid">
+    `;
+
+    products.forEach(p => {
+      const price = p.price?.toFixed(2) || '0.00';
+      
+      // Ensure absolute URL for images (AliExpress sometimes uses //)
+      let image = (p.images && p.images.length > 0) ? p.images[0] : (p.imageUrl || 'https://via.placeholder.com/220x200?text=No+Image');
+      if (image.startsWith('//')) image = 'https:' + image;
+
+      const affLink = getAffiliateLink(p);
+      const btnText = p.supplier ? `🛒 Acheter sur ${p.supplier}` : '🛒 Voir le produit';
+      
+      html += `
+      <div class="nutriplus-card">
+        <a href="${affLink}" target="_blank" style="display:block; text-decoration:none; color:inherit;">
+          <img src="${image}" class="nutriplus-img" alt="${p.name}" onerror="this.src='https://via.placeholder.com/220x200?text=Image+Error'">
+          <div class="nutriplus-info">
+            <h3 class="nutriplus-title">${p.name}</h3>
+            <p class="nutriplus-price">${price} €</p>
+            <div class="nutriplus-btn">${btnText}</div>
+          </div>
+        </a>
+      </div>
+      `;
+    });
+
+    html += `</div>`;
+    
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('Embed error:', error);
+    res.status(500).send('<p>Erreur lors du chargement des produits.</p>');
   }
 });
 

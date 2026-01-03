@@ -129,7 +129,13 @@ export default function StoreScreen() {
     try {
       const response = await fetch(`${API_ENDPOINTS.API_URL}/products/meta/suppliers`);
       const data = await response.json();
-      setSuppliers(data);
+      
+      // Strict filter for the 3 authorized sources
+      const authorized = ['Amazon', 'AliExpress', 'eBay'];
+      const filtered = ['Tous', ...data.filter(s => authorized.includes(s))];
+      
+      // Ensure specific sources are in the list if they exist in DB
+      setSuppliers(filtered);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
     }
@@ -195,7 +201,11 @@ export default function StoreScreen() {
       )}
       <View style={styles.imageContainer}>
         <SupplierBadge supplier={item.supplier} />
-        <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
+        <Image 
+          source={{ uri: item.imageUrl?.startsWith('//') ? `https:${item.imageUrl}` : (item.imageUrl || 'https://via.placeholder.com/400') }} 
+          style={styles.productImage} 
+          resizeMode="contain" 
+        />
       </View>
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
@@ -256,19 +266,36 @@ export default function StoreScreen() {
           <Text style={styles.dealsBannerText}>⚡ Offres du jour : Économisez jusqu'à 70% sur une sélection de produits</Text>
         </View>
 
-        {/* Suppliers Filter */}
+        {/* Suppliers Filter - The 3 Divisions */}
         <View style={styles.suppliersFilterCard}>
-            <Text style={styles.filterLabel}>Filtrer par site :</Text>
+            <View style={styles.filterHeader}>
+              <Filter size={14} color="#131921" />
+              <Text style={styles.filterLabel}>Filtrer par Source</Text>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suppliersScroll}>
-                {suppliers.map(sup => (
-                    <TouchableOpacity 
-                        key={sup} 
-                        style={[styles.supplierFilterBtn, selectedSupplier === sup && styles.supplierFilterBtnActive]}
-                        onPress={() => setSelectedSupplier(sup)}
-                    >
-                        <Text style={[styles.supplierFilterText, selectedSupplier === sup && styles.supplierFilterTextActive]}>{sup}</Text>
-                    </TouchableOpacity>
-                ))}
+                {suppliers.map(sup => {
+                    const isAmazon = sup === 'Amazon';
+                    const isAli = sup === 'AliExpress';
+                    const isEbay = sup === 'eBay';
+                    
+                    let activeColor = '#232F3E';
+                    if (isAmazon) activeColor = '#FF9900';
+                    if (isAli) activeColor = '#FF4747';
+                    if (isEbay) activeColor = '#0064D2';
+
+                    return (
+                        <TouchableOpacity 
+                            key={sup} 
+                            style={[
+                                styles.supplierFilterBtn, 
+                                selectedSupplier === sup && { backgroundColor: activeColor, borderColor: activeColor }
+                            ]}
+                            onPress={() => setSelectedSupplier(sup)}
+                        >
+                            <Text style={[styles.supplierFilterText, selectedSupplier === sup && styles.supplierFilterTextActive]}>{sup}</Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
         </View>
 
@@ -327,15 +354,12 @@ export default function StoreScreen() {
   return (
     <View style={styles.container}>
       {/* Top Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-            <Text style={styles.headerLogo}>🛍️ Store IA</Text>
-        </View>
+      <View style={styles.storeSearchHeader}>
         <View style={styles.searchContainer}>
             <Search color="#9CA3AF" size={20} />
             <TextInput 
                 style={styles.searchInput}
-                placeholder="Rechercher..."
+                placeholder="Rechercher un produit..."
                 placeholderTextColor="#9CA3AF"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -390,7 +414,7 @@ export default function StoreScreen() {
 const styles = StyleSheet.create({
     // Amazon Colors: #131921 (dark), #232F3E (lighter dark), #FF9900 (orange), #FEBD69 (light orange)
     container: { flex: 1, backgroundColor: '#EAEDED' },
-    header: { backgroundColor: '#131921', padding: 16, paddingTop: 50, paddingBottom: 12 },
+    storeSearchHeader: { backgroundColor: '#131921', padding: 12 },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
     headerLogo: { fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' },
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 2, borderColor: '#FF9900' },
@@ -497,11 +521,12 @@ const styles = StyleSheet.create({
     checkoutButtonText: { color: '#FFF', fontWeight: 'bold' },
 
     // Suppliers Filter
-    suppliersFilterCard: { backgroundColor: '#FFF', paddingVertical: 12, marginBottom: 10, borderRadius: 4, borderBottomWidth: 1, borderBottomColor: '#DDD' },
-    filterLabel: { fontSize: 13, fontWeight: 'bold', color: '#0F1111', marginLeft: 16, marginBottom: 8 },
-    suppliersScroll: { paddingHorizontal: 16 },
-    supplierFilterBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#D1D5DB', marginRight: 10 },
+    suppliersFilterCard: { backgroundColor: '#FFF', paddingVertical: 12, marginBottom: 10, borderRadius: 8, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+    filterHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, marginBottom: 10 },
+    filterLabel: { fontSize: 13, fontWeight: 'bold', color: '#0F1111' },
+    suppliersScroll: { paddingHorizontal: 11 },
+    supplierFilterBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB', marginRight: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
     supplierFilterBtnActive: { backgroundColor: '#232F3E', borderColor: '#232F3E' },
-    supplierFilterText: { fontSize: 13, color: '#4B5563', fontWeight: '600' },
+    supplierFilterText: { fontSize: 13, color: '#131921', fontWeight: 'bold' },
     supplierFilterTextActive: { color: '#FFF' },
 });

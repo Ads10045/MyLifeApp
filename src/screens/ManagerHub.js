@@ -128,36 +128,83 @@ export default function ManagerHub() {
       }
   };
 
-  const triggerAgent = async (type) => {
+  const triggerAgent = async (type, source = null) => {
     try {
       setLoadingStates(prev => ({ ...prev, [type]: true }));
-      if (type === 'sourcing') setProducts([]); // Clear previous products only for sourcing
+      if (type === 'sourcing' && !source) setProducts([]); // Clear only if global run
       
       const endpoint = type === 'sourcing' ? '/agent/run' : '/agent/fulfill';
-      const actionName = type === 'sourcing' ? 'Sourcing' : 'Fulfillment';
-      
-      Alert.alert('🤖 Commande Reçue', `L'agent ${actionName} démarre...`);
+      const actionName = source ? `Sourcing ${source}` : (type === 'sourcing' ? 'Sourcing Global' : 'Fulfillment');
       
       const response = await fetch(`${API_ENDPOINTS.BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ source })
       });
+
+      const data = await response.json();
+      Alert.alert('🤖 Commandes', data.message || `L'agent ${actionName} démarre...`);
       
-      // Poll for completion and fetch products
+      // Poll for completion
       setTimeout(async () => {
         setLoadingStates(prev => ({ ...prev, [type]: false }));
         fetchStatus();
-        
-        // Fetch status will now update products automatically from lastProducts
-      }, 4000); // Wait for batch to complete
+      }, 4000);
 
     } catch (error) {
       console.error('Error:', error);
       setLoadingStates(prev => ({ ...prev, [type]: false }));
+      Alert.alert('Erreur', 'Impossible de lancer l\'agent');
     }
+  };
+
+  const SourceMiniCard = ({ name, color, data, products }) => {
+    const isRunning = stats?.sourcing?.activeSources?.includes(name);
+    const isGlobalRunning = stats?.sourcing?.activeSources?.includes('Global');
+
+    return (
+        <View style={[styles.sourceMiniCard, { borderColor: color, opacity: (isGlobalRunning && !isRunning) ? 0.6 : 1 }]}>
+            <View style={styles.sourceMiniHeader}>
+                <Text style={[styles.sourceMiniTitle, { color }]}>{name}</Text>
+                <Text style={styles.sourceMiniRG}>RG: {stats?.sourcing?.stats?.rules?.[name] || '+30%'}</Text>
+            </View>
+            <View style={styles.sourceMiniStats}>
+                <Text style={styles.sourceMiniCount}>{stats?.sourcing?.stats?.[name.toLowerCase() + 'Count'] || 0}</Text>
+                <Text style={styles.sourceMiniLabel}>En stock</Text>
+            </View>
+
+            {/* Action Button */}
+            <TouchableOpacity 
+                onPress={() => triggerAgent('sourcing', name)}
+                disabled={isRunning || isGlobalRunning || loadingStates.sourcing}
+                style={[styles.sourceRunButton, { backgroundColor: color, opacity: (isRunning || isGlobalRunning) ? 0.7 : 1 }]}
+            >
+                {isRunning ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Play color="#FFF" size={12} fill="#FFF" />
+                        <Text style={styles.sourceRunText}>LANCER</Text>
+                    </View>
+                )}
+            </TouchableOpacity>
+
+            {/* Latest Result Preview */}
+            {products && products.length > 0 ? (
+                <View style={styles.sourceMiniPreview}>
+                    <Text style={styles.previewName} numberOfLines={1}>{products[0].name}</Text>
+                    <Text style={styles.previewPrice}>{products[0].price}€</Text>
+                </View>
+            ) : (
+                <View style={styles.sourceMiniEmpty}>
+                    <Text style={styles.emptyTextMini}>En attente</Text>
+                </View>
+            )}
+        </View>
+    );
   };
 
   const AgentCard = ({ title, type, data, icon: Icon, color1, color2 }) => (
@@ -179,25 +226,38 @@ export default function ManagerHub() {
                     <Settings color="#FFFFFF" size={16} />
                 </TouchableOpacity>
             )}
-            <View style={[styles.statusBadge, { backgroundColor: data?.isRunning ? '#10B981' : 'rgba(255,255,255,0.2)' }]}>
-            <Text style={styles.statusText}>{data?.isRunning ? 'RUNNING' : 'IDLE'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: data?.activeSources?.length > 0 ? '#10B981' : 'rgba(255,255,255,0.2)' }]}>
+            <Text style={styles.statusText}>{data?.activeSources?.length > 0 ? 'RUNNING' : 'IDLE'}</Text>
             </View>
         </View>
       </LinearGradient>
       
       <View style={styles.cardBody}>
         {type === 'sourcing' ? (
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-               <Text style={styles.statVal}>{data?.stats?.productsFound || 0}</Text>
-               <Text style={styles.statLabel}>Prod. Trouvés</Text>
+          <View>
+            <View style={styles.sourcingDivisions}>
+                <SourceMiniCard name="Amazon" color="#FF9900" products={data?.lastProductsBySource?.Amazon} />
+                <SourceMiniCard name="AliExpress" color="#FF4747" products={data?.lastProductsBySource?.AliExpress} />
+                <SourceMiniCard name="eBay" color="#0064D2" products={data?.lastProductsBySource?.eBay} />
             </View>
-            <View style={styles.stat}>
-               <Text style={styles.statVal}>{data?.stats?.lastCategory || '-'}</Text>
-               <Text style={styles.statLabel}>Dernière Cat.</Text>
-            </View>
+            
+            <TouchableOpacity 
+                style={[styles.globalRunBtn, (data?.activeSources?.length > 0 || loadingStates.sourcing) && { opacity: 0.5 }]} 
+                onPress={() => triggerAgent('sourcing')}
+                disabled={data?.activeSources?.length > 0 || loadingStates.sourcing}
+            >
+                {data?.activeSources?.includes('Global') ? (
+                    <ActivityIndicator color="#4F46E5" size="small" />
+                ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Bot color="#4F46E5" size={14} />
+                        <Text style={styles.globalRunBtnText}>LANCER TOUTES LES SOURCES</Text>
+                    </View>
+                )}
+            </TouchableOpacity>
           </View>
         ) : type === 'fulfillment' ? (
+// ...
           <View style={styles.statsRow}>
             <Text style={styles.infoText}>
               Automatise le paiement fournisseurs, l'expédition et 
@@ -490,8 +550,32 @@ const styles = StyleSheet.create({
   productName: { flex: 1, fontSize: 11, color: '#374151' },
   productPrice: { fontSize: 11, fontWeight: 'bold', color: '#10B981' },
   
+  // Sourcing Divisions Layout
+  sourcingDivisions: { flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginTop: 5 },
+  sourceMiniCard: { flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 10, borderWidth: 1, minHeight: 140 },
+  sourceMiniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  sourceMiniTitle: { fontSize: 10, fontWeight: 'bold' },
+  sourceMiniRG: { fontSize: 8, color: '#6B7280', fontWeight: 'bold' },
+  sourceMiniStats: { alignItems: 'center', marginBottom: 10 },
+  sourceMiniCount: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sourceMiniLabel: { fontSize: 8, color: '#9CA3AF', textTransform: 'uppercase' },
+  
+  sourceRunButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, borderRadius: 8, marginBottom: 8 },
+  sourceRunText: { color: '#FFF', fontSize: 9, fontWeight: 'bold' },
+  
+  sourceMiniPreview: { backgroundColor: '#FFF', borderRadius: 6, padding: 4, borderWidth: 1, borderColor: '#EEF2FF' },
+  previewName: { fontSize: 8, color: '#374151' },
+  previewPrice: { fontSize: 8, fontWeight: 'bold', color: '#10B981' },
+  sourceMiniEmpty: { backgroundColor: '#FFF', borderRadius: 6, padding: 4, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#D1D5DB' },
+  emptyTextMini: { fontSize: 8, color: '#9CA3AF', fontStyle: 'italic' },
+
+  globalRunBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 15, paddingVertical: 10, backgroundColor: '#EEF2FF', borderRadius: 10, borderWidth: 1, borderColor: '#C7D2FE' },
+  globalRunBtnText: { color: '#4F46E5', fontSize: 10, fontWeight: 'bold' },
+
   infoBox: { flexDirection: 'row', padding: 12, alignItems: 'center', gap: 8 },
   infoBoxText: { flex: 1, color: '#6B7280', fontSize: 11 },
+  
+  // Modal... (rest of the file stays same)
   
   // Modal
   modalContainer: { flex: 1, backgroundColor: '#111827' },
