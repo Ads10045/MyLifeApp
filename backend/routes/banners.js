@@ -18,10 +18,57 @@ router.get('/', async (req, res) => {
       where: { active: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(banners);
+
+    // Transform relative paths to full URLs
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fullBanners = banners.map(b => ({
+      ...b,
+      fullPath: b.path ? `${protocol}://${host}${b.path}` : null
+    }));
+
+    res.json(fullBanners);
   } catch (error) {
     console.error('Error fetching banners:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des bannières' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/banners/{id}:
+ *   get:
+ *     summary: Retrieve a single banner by ID
+ *     tags: [Banners]
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get('/:id', async (req, res) => {
+  try {
+    const banner = await prisma.banner.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!banner) {
+      return res.status(404).json({ error: 'Bannière non trouvée' });
+    }
+
+    // Transform relative path to full URL
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const fullBanner = {
+      ...banner,
+      fullPath: banner.path ? `${protocol}://${host}${banner.path}` : null
+    };
+
+    res.json(fullBanner);
+  } catch (error) {
+    console.error('Error fetching banner:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -52,12 +99,13 @@ router.get('/admin', authenticateToken, isAdmin, async (req, res) => {
  */
 router.post('/', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { name, position, product1Id, product2Id, product3Id, product4Id, product5Id, product6Id } = req.body;
+    const { name, position, path, product1Id, product2Id, product3Id, product4Id, product5Id, product6Id } = req.body;
     
     const banner = await prisma.banner.create({
       data: {
         name,
         position,
+        path,
         product1Id,
         product2Id,
         product3Id,

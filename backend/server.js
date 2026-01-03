@@ -44,6 +44,15 @@ const swaggerDocument = {
     },
     '/api/admin/users': {
       get: { summary: 'Get all users (Admin)', tags: ['Admin'], security: [{ bearerAuth: [] }], responses: { 200: { description: 'List of all users' } } }
+    },
+    '/api/banners': {
+      get: { summary: 'Retrieve all active banners', tags: ['Banners'], responses: { 200: { description: 'List of active banners' } } },
+      post: { summary: 'Create a new banner (Admin)', tags: ['Banners'], security: [{ bearerAuth: [] }], responses: { 201: { description: 'Banner created' } } }
+    },
+    '/api/banners/{id}': {
+      get: { summary: 'Retrieve a single banner by ID', tags: ['Banners'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Banner details returned' } } },
+      put: { summary: 'Update a banner', tags: ['Banners'], security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Banner updated' } } },
+      delete: { summary: 'Delete a banner', tags: ['Banners'], security: [{ bearerAuth: [] }], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: { description: 'Banner deleted' } } }
     }
   },
   components: {
